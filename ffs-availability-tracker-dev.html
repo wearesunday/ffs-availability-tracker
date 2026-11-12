@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<title>Featured Firm Slot Availability</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F4F3F6;
+    --surface:#FFFFFF;
+    --ink:#1F1A26;
+    --ink-soft:#6B6572;
+    --ink-faint:#9E98A6;
+    --line:#E4E1E9;
+    --line-soft:#EFEDF2;
+    --brand:#452A5D;
+    --brand-dark:#341F49;
+    --brand-soft:#F1EEF4;
+    --open:#3E8C91;
+    --open-bg:#E7F2F2;
+    --partial:#B4791E;
+    --partial-bg:#FBF0DF;
+    --full:#4A4E5A;
+    --full-bg:#EAEAEE;
+    --over:#A8492E;
+    --over-bg:#F8E7E1;
+    --radius:10px;
+    font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  button, input, select, textarea{ font-family:inherit; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-size:14px;
+    font-weight:300;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{ font-family: ui-monospace, "SF Mono", "Roboto Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; font-weight:400; }
+  #app{ max-width:1220px; margin:0 auto; padding:0 24px 80px; }
+
+  header.top{
+    margin:0 -24px 26px;
+    padding:26px 24px 20px;
+    background:var(--surface);
+    border-bottom:1px solid var(--line);
+    position:relative;
+  }
+  header.top::after{
+    content:"";
+    position:absolute; left:0; right:0; bottom:-1px; height:3px;
+    background:linear-gradient(90deg, var(--brand) 0%, var(--brand) 55%, var(--open) 100%);
+  }
+  header.top h1{
+    font-size:25px; font-weight:600; letter-spacing:-0.01em; margin:0 0 5px;
+    color:var(--brand); font-family:"Open Sans", sans-serif;
+  }
+  header.top p{ margin:0; color:var(--ink-soft); font-size:13.5px; max-width:640px; font-weight:300; }
+
+  /* Dropzone */
+  #dropzone{
+    border:1.5px dashed #C6CAD3;
+    border-radius:var(--radius);
+    background:var(--surface);
+    padding:34px 20px;
+    text-align:center;
+    color:var(--ink-soft);
+    transition:border-color .15s ease, background .15s ease;
+    cursor:pointer;
+  }
+  #dropzone.drag{ border-color:var(--open); background:var(--open-bg); color:var(--open); }
+  #dropzone strong{ color:var(--ink); }
+  #dropzone .hint{ font-size:12.5px; color:var(--ink-faint); margin-top:6px; }
+  #fileInput{ display:none; }
+
+  #loadedBar{
+    display:none;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:11px 16px;
+    margin-bottom:18px;
+    font-size:13px;
+  }
+  #loadedBar b{ color:var(--ink); }
+  #loadedBar .swap{
+    border:1px solid var(--line); background:var(--bg); color:var(--ink-soft);
+    padding:6px 12px; border-radius:7px; font-size:12.5px; cursor:pointer;
+  }
+  #loadedBar .swap:hover{ border-color:#C6CAD3; color:var(--ink); }
+
+  #errorBar{
+    display:none;
+    background:var(--over-bg); color:var(--over); border:1px solid #EAC5B9;
+    border-radius:var(--radius); padding:11px 16px; margin-bottom:18px; font-size:13px;
+  }
+
+  #workspace{ display:none; }
+
+  /* Controls */
+  .panel{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px 20px; margin-bottom:18px;
+    box-shadow:0 1px 2px rgba(31,26,38,0.04);
+  }
+  .controls-grid{
+    display:flex; flex-wrap:wrap; gap:18px 24px; align-items:flex-end;
+  }
+  .field label{
+    display:block; font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--ink-faint); margin-bottom:6px;
+  }
+  .field input[type=date], .field input[type=text], .field input[type=number]{
+    border:1px solid var(--line); border-radius:7px; padding:7px 10px; font-size:13.5px;
+    color:var(--ink); background:var(--bg); min-width:150px; font-family:inherit;
+  }
+  .field input[type=date]:focus, .field input[type=text]:focus, .field input[type=number]:focus{ outline:2px solid #BFDCDD; border-color:var(--open); }
+  .presets{ display:flex; gap:6px; flex-wrap:wrap; }
+  .presets button{
+    border:1px solid var(--line); background:var(--bg); color:var(--ink-soft);
+    padding:6.5px 12px; border-radius:7px; font-size:12.5px; cursor:pointer; font-family:inherit;
+  }
+  .presets button:hover{ border-color:#C6CAD3; color:var(--ink); }
+  .presets button.active{ background:var(--brand); border-color:var(--brand); color:#fff; }
+
+  .toggle-row{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-soft); }
+  .toggle-row input{ accent-color:var(--open); width:15px; height:15px; }
+
+  .search-wrap{ flex:1; min-width:200px; }
+  .search-wrap input{ width:100%; }
+
+  /* Dropdown button (areas) */
+  .dropdown-btn{
+    border:1px solid var(--line); background:var(--bg); color:var(--ink);
+    padding:7px 12px; border-radius:7px; font-size:13.5px; cursor:pointer; min-width:180px;
+    text-align:left; display:flex; align-items:center; justify-content:space-between; gap:8px;
+    font-family:inherit; transition:border-color .12s ease;
+  }
+  .dropdown-btn:hover{ border-color:var(--open); }
+  .chev-down{ color:var(--ink-faint); font-size:11px; }
+  .dropdown-panel{
+    display:none; position:absolute; top:calc(100% + 4px); left:0; z-index:20;
+    background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    box-shadow:0 8px 24px rgba(20,22,30,0.12); width:340px; max-height:380px;
+    overflow:hidden; flex-direction:column;
+  }
+  .dropdown-panel.open{ display:flex; }
+  .dropdown-filter{
+    margin:10px 10px 6px; padding:7px 10px; border:1px solid var(--line); border-radius:7px;
+    font-size:13px; color:var(--ink);
+  }
+  .area-tree{ overflow-y:auto; padding:0 6px 6px; flex:1; }
+  .region-group{ margin-bottom:2px; }
+  .region-row{
+    display:flex; align-items:center; gap:6px; padding:6px 6px; border-radius:6px; cursor:pointer;
+    font-size:13px; font-weight:600; color:var(--ink);
+  }
+  .region-row:hover{ background:var(--bg); }
+  .region-row .chev{ width:12px; font-size:10px; color:var(--ink-faint); transition:transform .12s ease; }
+  .region-row.expanded .chev{ transform:rotate(90deg); }
+  .region-row input[type=checkbox]{ accent-color:var(--open); width:14px; height:14px; }
+  .region-count{ margin-left:auto; color:var(--ink-faint); font-weight:400; font-size:11.5px; }
+  .area-list{ display:none; padding-left:26px; }
+  .area-list.expanded{ display:block; }
+  .area-row-check{
+    display:flex; align-items:center; gap:7px; padding:4px 6px; border-radius:6px; cursor:pointer;
+    font-size:12.5px; color:var(--ink-soft);
+  }
+  .area-row-check:hover{ background:var(--bg); color:var(--ink); }
+  .area-row-check input[type=checkbox]{ accent-color:var(--open); width:13px; height:13px; }
+  .dropdown-actions{
+    display:flex; justify-content:space-between; padding:8px 12px; border-top:1px solid var(--line);
+  }
+  .link-btn{ border:none; background:none; color:var(--ink-soft); font-size:12.5px; cursor:pointer; padding:2px 4px; font-family:inherit; }
+  .link-btn:hover{ color:var(--ink); }
+  .link-btn.primary{
+    color:#fff; font-weight:600; background:var(--open); padding:6px 14px; border-radius:20px;
+    transition:background .12s ease;
+  }
+  .link-btn.primary:hover{ color:#fff; background:#357579; }
+  .hidden-region{ display:none !important; }
+  .hidden-area{ display:none !important; }
+
+  /* Firm autocomplete */
+  #firmInput{ border:1px solid var(--line); border-radius:7px; padding:7px 10px; font-size:13.5px; width:100%; color:var(--ink); background:var(--bg); }
+  #firmInput:focus{ outline:2px solid #B7D6D9; border-color:var(--open); }
+  .firm-suggestions{ width:100%; max-height:260px; }
+  .firm-suggestion{ padding:8px 12px; font-size:13px; cursor:pointer; }
+  .firm-suggestion:hover{ background:var(--bg); }
+  .firm-chip{
+    display:inline-flex; align-items:center; gap:6px; background:var(--open-bg); color:var(--open);
+    font-size:12.5px; font-weight:600; padding:4px 10px; border-radius:20px; margin-bottom:6px;
+  }
+  .firm-chip button{
+    border:none; background:none; color:var(--open); cursor:pointer; font-size:14px; line-height:1;
+    padding:0; font-weight:700;
+  }
+
+  /* Summary cards */
+  .summary-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:18px;
+  }
+  .stat{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    padding:14px 16px; position:relative; overflow:hidden;
+    box-shadow:0 1px 2px rgba(31,26,38,0.04);
+  }
+  .stat::before{
+    content:""; position:absolute; top:0; left:0; right:0; height:3px; background:var(--brand); opacity:.55;
+  }
+  .stat .num{ font-size:23px; font-weight:700; letter-spacing:-0.01em; }
+  .stat .label{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
+  .stat.open .num{ color:var(--open); }
+  .stat.open::before{ background:var(--open); opacity:1; }
+  .stat.partial .num{ color:var(--partial); }
+  .stat.partial::before{ background:var(--partial); opacity:1; }
+  .stat.full .num{ color:var(--full); }
+  .stat.full::before{ background:var(--full); opacity:1; }
+  .stat.over .num{ color:var(--over); }
+  .stat.over::before{ background:var(--over); opacity:1; }
+
+  /* Tabs */
+  .tabs{ display:flex; gap:4px; border-bottom:1px solid var(--line); margin-bottom:16px; }
+  .tab{
+    padding:9px 16px; font-size:13.5px; font-weight:600; color:var(--ink-soft);
+    cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:color .12s ease, border-color .12s ease;
+  }
+  .tab:hover{ color:var(--brand); }
+  .tab.active{ color:var(--brand); border-bottom-color:var(--brand); }
+
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  table.data{ width:100%; border-collapse:collapse; }
+  table.data th{
+    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--ink-faint); font-weight:600; padding:8px 10px; border-bottom:1px solid var(--line);
+    cursor:pointer; user-select:none; white-space:nowrap;
+  }
+  table.data th:hover{ color:var(--ink-soft); }
+  table.data th.sorted::after{ content:" ▾"; font-size:9px; }
+  table.data td{ padding:10px 10px; border-bottom:1px solid var(--line-soft); vertical-align:middle; font-size:13px; }
+  .row-weeks-input{
+    width:42px; border:1px solid var(--line); border-radius:5px; padding:3px 5px; font-size:12px;
+    color:var(--ink); background:var(--bg); font-family: ui-monospace, "SF Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  }
+  .row-weeks-input:focus{ outline:2px solid #B7D6D9; border-color:var(--open); }
+  table.data tr.area-row{ cursor:pointer; box-shadow:inset 3px 0 0 transparent; transition:box-shadow .12s ease, background .12s ease; }
+  table.data tr.area-row:hover{ background:#FAFAFB; box-shadow:inset 3px 0 0 var(--open); }
+  .area-name{ font-weight:600; }
+  .area-sub{ color:var(--ink-faint); font-size:12px; }
+
+  .pill{
+    display:inline-block; padding:2px 8px; border-radius:20px; font-size:11.5px; font-weight:600;
+  }
+  .pill.open{ background:var(--open-bg); color:var(--open); }
+  .pill.partial{ background:var(--partial-bg); color:var(--partial); }
+  .pill.full{ background:var(--full-bg); color:var(--full); }
+  .pill.over{ background:var(--over-bg); color:var(--over); }
+  .pill.ok{ background:var(--open-bg); color:var(--open); }
+  .pill.near{ background:var(--partial-bg); color:var(--partial); }
+
+  .strip{ display:flex; gap:2px; flex-wrap:wrap; max-width:420px; }
+  .sq{ width:9px; height:9px; border-radius:2px; flex:none; }
+  .sq.open{ background:#3FA157; }
+  .sq.partial{ background:#E0A526; }
+  .sq.full{ background:#C0392B; }
+
+  .detail-row td{ background:#FAFAFB; padding:14px 20px; }
+  .week-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  .week-table th{ text-align:left; color:var(--ink-faint); font-weight:600; padding:5px 8px; font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; }
+  .week-table td{ padding:5px 8px; border-top:1px solid var(--line-soft); }
+  .week-table .firms{ color:var(--ink-soft); }
+
+  .capbar{ position:relative; background:var(--line-soft); border-radius:5px; height:7px; width:140px; overflow:hidden; }
+  .capbar .fill{ position:absolute; left:0; top:0; bottom:0; border-radius:5px; }
+  .capbar .fill.ok{ background:var(--open); }
+  .capbar .fill.near{ background:var(--partial); }
+  .capbar .fill.over{ background:var(--over); }
+
+  .empty-msg{ padding:40px 10px; text-align:center; color:var(--ink-faint); font-size:13.5px; }
+  .history-note{
+    background:var(--partial-bg); color:var(--partial); border:1px solid #EAD3A8;
+    border-radius:var(--radius); padding:10px 16px; margin-bottom:18px; font-size:12.5px;
+  }
+  tr.total-row{ font-weight:700; background:#FAFAFB; }
+  tr.total-row td{ border-top:2px solid var(--line); border-bottom:none; padding:10px; color:var(--ink); }
+  .footnote{ color:var(--ink-faint); font-size:12px; margin-top:14px; }
+  .chev{ display:inline-block; width:14px; color:var(--ink-faint); transition:transform .12s ease; }
+  .area-row.expanded .chev{ transform:rotate(90deg); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header class="top">
+    <h1>Featured Firm Slot Availability</h1>
+    <p>Drop in a Feature Slots by Office export. Set a period and see which areas have open slots, and which firms are near their booking cap.</p>
+  </header>
+
+  <div id="dropzone">
+    <div><strong>Drop the export here</strong>, or click to choose a file</div>
+    <div class="hint">HTML export, read in your browser and never uploaded</div>
+  </div>
+  <input type="file" id="fileInput" accept=".html,.htm">
+
+  <div id="loadedBar">
+    <span id="loadedText"></span>
+    <button class="swap" id="swapBtn">Load a different file</button>
+  </div>
+
+  <div id="errorBar"></div>
+
+  <div id="workspace">
+
+    <div class="panel">
+      <div class="controls-grid">
+        <div class="field">
+          <label>Period start</label>
+          <input type="date" id="periodStart">
+        </div>
+        <div class="field">
+          <label>Period end</label>
+          <input type="date" id="periodEnd">
+        </div>
+        <div class="field">
+          <label>Quick range</label>
+          <div class="presets" id="presets">
+            <button data-preset="12">Next 12 weeks</button>
+            <button data-preset="26">Next 26 weeks</button>
+            <button data-preset="52">Next 52 weeks</button>
+            <button data-preset="all">Full dataset</button>
+          </div>
+        </div>
+        <div class="field toggle-row" style="padding-bottom:7px;">
+          <input type="checkbox" id="includeDeleted">
+          <label style="margin:0; text-transform:none; font-size:13px; font-weight:400; color:var(--ink-soft);">Include deleted slots</label>
+        </div>
+      </div>
+      <div class="controls-grid" style="margin-top:16px;">
+        <div class="field" style="position:relative;">
+          <label>Areas / regions</label>
+          <button type="button" id="areaSelectBtn" class="dropdown-btn">All areas <span class="chev-down">\u25BE</span></button>
+          <div id="areaSelectPanel" class="dropdown-panel">
+            <input type="text" id="areaFilterInput" class="dropdown-filter" placeholder="Filter regions or areas…">
+            <div id="areaTree" class="area-tree"></div>
+            <div class="dropdown-actions">
+              <button type="button" id="areaClearBtn" class="link-btn">Clear all</button>
+              <button type="button" id="areaDoneBtn" class="link-btn primary">Done</button>
+            </div>
+          </div>
+        </div>
+        <div class="field" style="position:relative; min-width:260px;">
+          <label>Firm</label>
+          <div id="firmChip" class="firm-chip" style="display:none;"></div>
+          <input type="text" id="firmInput" placeholder="Type a firm name…">
+          <div id="firmSuggestions" class="dropdown-panel firm-suggestions"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="summary-grid" id="summaryGrid"></div>
+    <div id="historyNote" class="history-note" style="display:none;"></div>
+
+    <div class="tabs">
+      <div class="tab active" data-view="areas">Area availability</div>
+      <div class="tab" data-view="firms">Firm capacity</div>
+    </div>
+
+    <div class="view active" id="view-areas">
+      <div class="panel" style="padding:0; overflow-x:auto;">
+        <table class="data" id="areaTable">
+          <thead>
+            <tr>
+              <th style="width:26px;"></th>
+              <th data-sort="name">Area</th>
+              <th data-sort="weeks">Weeks in period</th>
+              <th data-sort="bookablePerFirm">Bookable</th>
+              <th data-sort="nextAvailable">Next available</th>
+              <th>Weeks requested</th>
+              <th data-sort="openWeeks">Open</th>
+              <th data-sort="partialWeeks">Partial</th>
+              <th data-sort="fullWeeks">Full</th>
+              <th>Availability</th>
+              <th data-sort="lapsedRisk">Risk: recently lapsed</th>
+            </tr>
+          </thead>
+          <tbody id="areaTbody"></tbody>
+        </table>
+        <div class="empty-msg" id="areaEmpty" style="display:none;">No areas match the current filters.</div>
+      </div>
+      <p class="footnote"><b>Bookable</b> is <span id="areaFootnoteFirmPart">a new-business guide: how many weeks a brand new firm with no booking history could claim here</span>, respecting the 26-in-52-week cap and the 4-consecutive-week limit; pick a firm above and it switches to that firm's own figure instead. <b>Bookable slots</b> (top summary) counts the actual free slot units rather than weeks, an Open week is worth 2, a Partial week is worth 1. <b>Next available</b> is the first bookable week in this period. Enter the number of weeks a prospective firm is asking for into <b>Weeks requested</b> on any row, this sets the bar for <b>Risk: recently lapsed</b> on that row: a firm that booked at least that many weeks here in the prior 52 weeks but has nothing booked in this period, similarly sized churn to what's being discussed now, and a candidate for a renewal call before offering the slot elsewhere. Leave it blank and the risk check defaults to 13 weeks. <b>Open</b> = 0 firms booked, <b>Partial</b> = 1 of 2 booked, <b>Full</b> = 2 of 2 booked. Click a row for the week-by-week breakdown.</p>
+    </div>
+
+    <div class="view" id="view-firms">
+      <div class="panel" style="padding:0; overflow-x:auto;">
+        <table class="data" id="firmTable">
+          <thead>
+            <tr>
+              <th data-sort="name">Firm</th>
+              <th data-sort="area">Area</th>
+              <th data-sort="booked">Booked (period)</th>
+              <th data-sort="lastBooked">Last booked week</th>
+              <th data-sort="used52">52wk usage</th>
+              <th data-sort="bookable">Bookable weeks</th>
+              <th>Usage</th>
+              <th data-sort="status">Status</th>
+            </tr>
+          </thead>
+          <tbody id="firmTbody"></tbody>
+        </table>
+        <div class="empty-msg" id="firmEmpty" style="display:none;">No firm/area combinations match the current filters.</div>
+      </div>
+      <p class="footnote">Each firm can hold at most 26 slot-weeks in any trailing 52 weeks at a single area, and cannot hold more than 4 consecutive weeks without a gap. <b>Bookable weeks</b> is how many weeks in the selected period this firm could still take at this area, working forward from its actual bookings and respecting both rules (<span id="capNote"></span>).</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const REGION_LOOKUP = {"Ayrshire": "Scotland", "Barking and Dagenham": "London", "Barnet": "London", "Barnsley": "Yorkshire and The Humber", "Bedford": "East of England", "Bexley": "London", "Birmingham": "West Midlands", "Blackburn with Darwen": "North West", "Blackpool": "North West", "Blaenau Gwent": "Wales", "Bolton": "North West", "Borders": "Scotland", "Bournemouth": "South West", "Bracknell Forest": "South East", "Bradford": "Yorkshire and The Humber", "Brent": "London", "Bridgend": "Wales", "Brighton and Hove": "South East", "Bristol": "South West", "Bromley": "London", "Buckinghamshire": "South East", "Bury": "North West", "Caerphilly": "Wales", "Calderdale": "Yorkshire and The Humber", "Cambridgeshire": "East of England", "Camden": "London", "Cardiff": "Wales", "Carmarthenshire": "Wales", "Central Bedfordshire": "East of England", "Central Scotland": "Scotland", "Ceredigion": "Wales", "Cheshire East": "North West", "Cheshire West and Chester": "North West", "City of London": "London", "Conwy": "Wales", "Cornwall": "South West", "County Durham": "North East", "Coventry": "West Midlands", "Croydon": "London", "Cumbria": "North West", "Darlington": "North East", "Denbighshire": "Wales", "Derby": "East Midlands", "Derbyshire": "East Midlands", "Devon": "South West", "Doncaster": "Yorkshire and The Humber", "Dorset": "South West", "Dudley": "West Midlands", "Dumfries and Galloway": "Scotland", "Dunbartonshire and Argyll and Bute": "Scotland", "Ealing": "London", "East Riding of Yorkshire": "Yorkshire and The Humber", "East Sussex": "South East", "Enfield": "London", "Essex": "East of England", "Falkirk": "Scotland", "Fife": "Scotland", "Flintshire": "Wales", "Gateshead": "North East", "Glasgow": "Scotland", "Gloucestershire": "South West", "Grampian": "Scotland", "Greenwich": "London", "Gwynedd": "Wales", "Hackney": "London", "Halton": "North West", "Hammersmith and Fulham": "London", "Hampshire": "South East", "Harrow": "London", "Hartlepool": "North East", "Havering": "London", "Herefordshire": "West Midlands", "Hertfordshire": "East of England", "Highlands and Western Isles": "Scotland", "Hillingdon": "London", "Hounslow": "London", "Isle of Anglesey": "Wales", "Isle of Wight": "South East", "Isles of Scilly": "South West", "Islington": "London", "Kensington and Chelsea": "London", "Kent": "South East", "Kingston upon Hull": "Yorkshire and The Humber", "Kingston upon Thames": "London", "Kirklees": "Yorkshire and The Humber", "Knowsley": "North West", "Lambeth": "London", "Lancashire": "North West", "Leeds": "Yorkshire and The Humber", "Leicester": "East Midlands", "Leicestershire": "East Midlands", "Lewisham": "London", "Lincolnshire": "East Midlands", "Liverpool": "North West", "Lothian": "Scotland", "Luton": "East of England", "Manchester": "North West", "Medway": "South East", "Merthyr Tydfil": "Wales", "Merton": "London", "Middlesbrough": "North East", "Milton Keynes": "South East", "Monmouthshire": "Wales", "Neath Port Talbot": "Wales", "Newcastle upon Tyne": "North East", "Newham": "London", "Newport": "Wales", "Norfolk": "East of England", "North East Lincolnshire": "Yorkshire and The Humber", "North Lincolnshire": "Yorkshire and The Humber", "North Somerset": "South West", "North Tyneside": "North East", "North Yorkshire": "Yorkshire and The Humber", "Northamptonshire": "East Midlands", "Northern Ireland": "Northern Ireland", "Northumberland": "North East", "Nottingham": "East Midlands", "Nottinghamshire": "East Midlands", "Oldham": "North West", "Orkney and Shetland": "Scotland", "Oxfordshire": "South East", "Pembrokeshire": "Wales", "Peterborough": "East of England", "Plymouth": "South West", "Poole": "South West", "Portsmouth": "South East", "Powys": "Wales", "Reading": "South East", "Redbridge": "London", "Redcar and Cleveland": "North East", "Renfrewshire": "Scotland", "Rhondda Cynon Taf": "Wales", "Richmond upon Thames": "London", "Rochdale": "North West", "Rotherham": "Yorkshire and The Humber", "Rutland": "East Midlands", "Salford": "North West", "Sandwell": "West Midlands", "Sefton": "North West", "Sheffield": "Yorkshire and The Humber", "Shropshire": "West Midlands", "Slough": "South East", "Solihull": "West Midlands", "Somerset": "South West", "South Gloucestershire": "South West", "South Tyneside": "North East", "Southampton": "South East", "Southend-on-Sea": "East of England", "Southwark": "London", "St. Helens": "North West", "Staffordshire": "West Midlands", "Stockport": "North West", "Stockton-on-Tees": "North East", "Stoke-on-Trent": "West Midlands", "Suffolk": "East of England", "Sunderland": "North East", "Surrey": "South East", "Sutton": "London", "Swindon": "South West", "Tameside": "North West", "Tayside": "Scotland", "Telford and Wrekin": "West Midlands", "Thurrock": "East of England", "Torbay": "South West", "Torfaen": "Wales", "Tower Hamlets": "London", "Trafford": "North West", "Vale of Glamorgan": "Wales", "Wakefield": "Yorkshire and The Humber", "Walsall": "West Midlands", "Waltham Forest": "London", "Wandsworth": "London", "Warrington": "North West", "Warwickshire": "West Midlands", "West Berkshire": "South East", "West Sussex": "South East", "Westminster": "London", "Wigan": "North West", "Wiltshire": "South West", "Wirral": "North West", "Wokingham": "South East", "Wolverhampton": "West Midlands", "Worcestershire": "West Midlands", "Wrexham": "Wales", "York": "Yorkshire and The Humber"};
+
+  let allSlots = [];
+  let earliestDataWeekM = null;
+  let sortState = { areas: { key:'bookablePerFirm', dir:-1 }, firms: { key:'bookable', dir:1 } };
+  let expandedOffice = null;
+  let selectedAreas = new Set(); // empty = all areas
+  let selectedFirm = null; // null = new-business (new entrant) mode
+  let rowWeeksNeeded = new Map(); // location -> requested weeks (per-row, user-entered)
+  let regionGroups = new Map(); // region -> sorted array of locations
+  let locationRegionMap = new Map(); // location -> region, canonical list of every known area
+  let allFirmNames = [];
+
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const loadedBar = document.getElementById('loadedBar');
+  const loadedText = document.getElementById('loadedText');
+  const errorBar = document.getElementById('errorBar');
+  const workspace = document.getElementById('workspace');
+
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault(); dropzone.classList.remove('drag');
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', e => {
+    if (e.target.files.length) handleFile(e.target.files[0]);
+  });
+  document.getElementById('swapBtn').addEventListener('click', () => {
+    dropzone.style.display = 'block';
+    loadedBar.style.display = 'none';
+    workspace.style.display = 'none';
+    fileInput.value = '';
+  });
+
+  function handleFile(file){
+    errorBar.style.display = 'none';
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      try{
+        const { slots, firmCount, areaCount } = parseExport(ev.target.result);
+        if (!slots.length) throw new Error('No feature slot rows were found in this file. Make sure it is the Feature Slots by Office export.');
+        allSlots = slots;
+        loadedText.innerHTML = 'Loaded <b>' + firmCount + '</b> firms, <b>' + areaCount + '</b> areas, <b>' + slots.length + '</b> slot bookings from <b>' + escapeHtml(file.name) + '</b>';
+        dropzone.style.display = 'none';
+        loadedBar.style.display = 'flex';
+        workspace.style.display = 'block';
+        selectedAreas = new Set();
+        selectedFirm = null;
+        buildLookups();
+        renderAreaTree();
+        updateAreaBtnLabel();
+        updateFirmChip();
+        setupPeriodDefaults();
+        renderAll();
+      }catch(err){
+        errorBar.textContent = err.message || 'Could not parse this file.';
+        errorBar.style.display = 'block';
+      }
+    };
+    reader.onerror = function(){
+      errorBar.textContent = 'Could not read the file.';
+      errorBar.style.display = 'block';
+    };
+    reader.readAsText(file);
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function parseExport(html){
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const panels = doc.querySelectorAll('.panel');
+    const slots = [];
+    const officeSet = new Set();
+    const locationSet = new Set();
+    let firmCount = 0;
+
+    panels.forEach(panel => {
+      const h4 = panel.querySelector('h4');
+      const table = panel.querySelector('table');
+      if (!h4 || !table) return;
+      const firmName = h4.textContent.trim();
+      if (!firmName) return;
+      const refSpan = panel.querySelector('.panel-heading span');
+      let firmRef = refSpan ? refSpan.textContent.trim().replace(/[()]/g,'') : '';
+      firmCount++;
+
+      table.querySelectorAll('tbody tr').forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        if (tds.length < 7) return;
+        const officeText = tds[0].textContent.trim();
+        if (!officeText) return; // summary/footer row
+
+        const a = tds[0].querySelector('a');
+        let officeId = null;
+        if (a){
+          const m = (a.getAttribute('href')||'').match(/Office\/Details\/(\d+)/);
+          if (m) officeId = m[1];
+        }
+        const officeMatch = officeText.match(/^(.*)\((\d+)\)$/);
+        const city = officeMatch ? officeMatch[1].trim() : officeText;
+        const officeNumber = officeMatch ? officeMatch[2] : '';
+        if (!officeId) officeId = city + '|' + officeNumber;
+
+        const weekText = tds[1].textContent.trim();
+        const weekMatch = weekText.match(/Week\s*(\d+)\s*:\s*(.+)/);
+        if (!weekMatch) return;
+        const weekNum = parseInt(weekMatch[1], 10);
+        const weekStart = new Date(weekMatch[2].trim());
+        if (isNaN(weekStart.getTime())) return;
+
+        const locText = tds[2].textContent.trim();
+        const locParts = locText.split(',').map(s => s.trim());
+        const location = locParts[0] || '';
+        const region = REGION_LOOKUP[location] || locParts[1] || '';
+        if (!region) return; // not a UK catchment area (e.g. overseas offices) - excluded
+
+        const cls = tr.className || '';
+        const isDeleted = cls.indexOf('deleted') !== -1;
+        const isFuture = cls.indexOf('future') !== -1;
+
+        officeSet.add(officeId);
+        locationSet.add(location || '(no location)');
+
+        slots.push({
+          firmName, firmRef, officeId, city, officeNumber,
+          location, region, weekNum, weekStart, isDeleted, isFuture
+        });
+      });
+    });
+
+    return { slots, firmCount, officeCount: officeSet.size, areaCount: locationSet.size };
+  }
+
+  // ---------- period controls ----------
+  const periodStartEl = document.getElementById('periodStart');
+  const periodEndEl = document.getElementById('periodEnd');
+  const includeDeletedEl = document.getElementById('includeDeleted');
+  const areaSelectBtn = document.getElementById('areaSelectBtn');
+  const areaSelectPanel = document.getElementById('areaSelectPanel');
+  const areaFilterInput = document.getElementById('areaFilterInput');
+  const areaTreeEl = document.getElementById('areaTree');
+  const firmInput = document.getElementById('firmInput');
+  const firmSuggestionsEl = document.getElementById('firmSuggestions');
+  const firmChipEl = document.getElementById('firmChip');
+
+  // Feature-slot weeks run Sunday to Saturday (every startDt in the export lands on a
+  // Sunday), so "the start of the week" for any date must floor to that Sunday.
+  function weekStartOf(d){
+    const dt = new Date(d);
+    const day = dt.getDay(); // 0 = Sunday
+    dt.setDate(dt.getDate() - day);
+    dt.setHours(0,0,0,0);
+    return dt;
+  }
+  function fmtDateInput(d){ return d.toISOString().slice(0,10); }
+  function fmtDateDisplay(d){
+    return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+  }
+  function addWeeks(d, n){ const dt = new Date(d); dt.setDate(dt.getDate() + n*7); return dt; }
+  // The current week is always partial (part of it has already passed), so every default and
+  // preset period starts from next week instead.
+  function nextWeekStart(){ return addWeeks(weekStartOf(new Date()), 1); }
+
+  function setupPeriodDefaults(){
+    const start = nextWeekStart();
+    periodStartEl.value = fmtDateInput(start);
+    periodEndEl.value = fmtDateInput(addWeeks(start, 11));
+    setActivePreset('12');
+  }
+
+  document.getElementById('presets').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-preset]');
+    if (!btn) return;
+    const preset = btn.getAttribute('data-preset');
+    const start = nextWeekStart();
+    if (preset === 'all'){
+      const dates = allSlots.map(s => s.weekStart).filter(Boolean);
+      if (dates.length){
+        const min = new Date(Math.min(...dates));
+        const max = new Date(Math.max(...dates));
+        periodStartEl.value = fmtDateInput(weekStartOf(min));
+        periodEndEl.value = fmtDateInput(weekStartOf(max));
+      }
+    } else {
+      const n = parseInt(preset, 10);
+      periodStartEl.value = fmtDateInput(start);
+      periodEndEl.value = fmtDateInput(addWeeks(start, n - 1));
+    }
+    setActivePreset(preset);
+    renderAll();
+  });
+  function setActivePreset(preset){
+    document.querySelectorAll('#presets button').forEach(b => {
+      b.classList.toggle('active', b.getAttribute('data-preset') === preset);
+    });
+  }
+  [periodStartEl, periodEndEl].forEach(el => el.addEventListener('change', () => { setActivePreset(''); renderAll(); }));
+  includeDeletedEl.addEventListener('change', renderAll);
+
+  // ---------- area (region-grouped, multi-select) and firm (single-select) filters ----------
+  function buildLookups(){
+    regionGroups = new Map();
+    locationRegionMap = new Map();
+    const firmSet = new Set();
+    earliestDataWeekM = null;
+    allSlots.forEach(s => {
+      const loc = s.location || '(no location)';
+      const reg = s.region || '(no region)';
+      if (!regionGroups.has(reg)) regionGroups.set(reg, new Set());
+      regionGroups.get(reg).add(loc);
+      locationRegionMap.set(loc, reg);
+      firmSet.add(s.firmName);
+      const wk = weekStartOf(s.weekStart).getTime();
+      if (earliestDataWeekM === null || wk < earliestDataWeekM) earliestDataWeekM = wk;
+    });
+    allFirmNames = Array.from(firmSet).sort((a,b) => a.localeCompare(b));
+  }
+
+
+  function renderAreaTree(filterText){
+    const ft = (filterText || '').trim().toLowerCase();
+    const regions = Array.from(regionGroups.keys()).sort((a,b) => a.localeCompare(b));
+    areaTreeEl.innerHTML = regions.map(region => {
+      const locations = Array.from(regionGroups.get(region)).sort((a,b) => a.localeCompare(b));
+      const regionMatches = region.toLowerCase().includes(ft);
+      const visibleLocations = ft && !regionMatches ? locations.filter(l => l.toLowerCase().includes(ft)) : locations;
+      if (ft && !regionMatches && !visibleLocations.length) return '';
+      const checkedCount = locations.filter(l => selectedAreas.has(l)).length;
+      const allChecked = checkedCount === locations.length;
+      const someChecked = checkedCount > 0 && !allChecked;
+      const regionSafe = escapeHtml(region);
+      const rows = visibleLocations.map(loc => {
+        const checked = selectedAreas.has(loc) ? 'checked' : '';
+        return '<label class="area-row-check"><input type="checkbox" data-loc="' + escapeHtml(loc) + '" ' + checked + '>' + escapeHtml(loc) + '</label>';
+      }).join('');
+      return '<div class="region-group" data-region="' + regionSafe + '">' +
+        '<div class="region-row' + (ft ? ' expanded' : '') + '">' +
+          '<span class="chev">\u25B8</span>' +
+          '<input type="checkbox" data-region-check="' + regionSafe + '" ' + (allChecked ? 'checked' : '') + (someChecked ? ' data-indeterminate="1"' : '') + '>' +
+          '<span class="region-label">' + regionSafe + '</span>' +
+          '<span class="region-count">' + checkedCount + '/' + locations.length + '</span>' +
+        '</div>' +
+        '<div class="area-list' + (ft ? ' expanded' : '') + '">' + rows + '</div>' +
+      '</div>';
+    }).join('');
+
+    areaTreeEl.querySelectorAll('input[data-indeterminate]').forEach(cb => { cb.indeterminate = true; });
+
+    areaTreeEl.querySelectorAll('.region-row').forEach(row => {
+      row.addEventListener('click', e => {
+        if (e.target.matches('input[type=checkbox]')) return;
+        row.classList.toggle('expanded');
+        row.nextElementSibling.classList.toggle('expanded');
+      });
+    });
+    areaTreeEl.querySelectorAll('input[data-region-check]').forEach(cb => {
+      cb.addEventListener('click', e => e.stopPropagation());
+      cb.addEventListener('change', () => {
+        const region = cb.getAttribute('data-region-check');
+        const locations = Array.from(regionGroups.get(region) || []);
+        if (cb.checked){ locations.forEach(l => selectedAreas.add(l)); }
+        else { locations.forEach(l => selectedAreas.delete(l)); }
+        renderAreaTree(areaFilterInput.value);
+        updateAreaBtnLabel();
+        renderAll();
+      });
+    });
+    areaTreeEl.querySelectorAll('input[data-loc]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const loc = cb.getAttribute('data-loc');
+        if (cb.checked) selectedAreas.add(loc); else selectedAreas.delete(loc);
+        renderAreaTree(areaFilterInput.value);
+        updateAreaBtnLabel();
+        renderAll();
+      });
+    });
+  }
+
+  function updateAreaBtnLabel(){
+    const n = selectedAreas.size;
+    areaSelectBtn.innerHTML = (n === 0 ? 'All areas' : n + ' area' + (n===1?'':'s') + ' selected') + ' <span class="chev-down">\u25BE</span>';
+  }
+
+  areaFilterInput.addEventListener('input', () => renderAreaTree(areaFilterInput.value));
+  areaSelectBtn.addEventListener('click', () => {
+    areaSelectPanel.classList.toggle('open');
+    firmSuggestionsEl.classList.remove('open');
+  });
+  document.getElementById('areaClearBtn').addEventListener('click', () => {
+    selectedAreas = new Set();
+    areaFilterInput.value = '';
+    renderAreaTree();
+    updateAreaBtnLabel();
+    renderAll();
+  });
+  document.getElementById('areaDoneBtn').addEventListener('click', () => {
+    areaSelectPanel.classList.remove('open');
+  });
+
+  function updateFirmChip(){
+    if (selectedFirm){
+      firmChipEl.style.display = 'inline-flex';
+      firmChipEl.innerHTML = escapeHtml(selectedFirm) + ' <button type="button" id="firmChipClear">\u2715</button>';
+      firmInput.style.display = 'none';
+      document.getElementById('firmChipClear').addEventListener('click', () => {
+        selectedFirm = null;
+        updateFirmChip();
+        renderAll();
+      });
+    } else {
+      firmChipEl.style.display = 'none';
+      firmInput.style.display = 'block';
+      firmInput.value = '';
+    }
+  }
+
+  function renderFirmSuggestions(text){
+    const t = text.trim().toLowerCase();
+    if (!t){ firmSuggestionsEl.classList.remove('open'); firmSuggestionsEl.innerHTML=''; return; }
+    const matches = allFirmNames.filter(f => f.toLowerCase().includes(t)).slice(0, 30);
+    if (!matches.length){ firmSuggestionsEl.classList.remove('open'); firmSuggestionsEl.innerHTML=''; return; }
+    firmSuggestionsEl.innerHTML = matches.map(f => '<div class="firm-suggestion" data-firm="' + escapeHtml(f) + '">' + escapeHtml(f) + '</div>').join('');
+    firmSuggestionsEl.classList.add('open');
+    firmSuggestionsEl.querySelectorAll('.firm-suggestion').forEach(el => {
+      el.addEventListener('click', () => {
+        selectedFirm = el.getAttribute('data-firm');
+        firmSuggestionsEl.classList.remove('open');
+        firmSuggestionsEl.innerHTML = '';
+        updateFirmChip();
+        renderAll();
+      });
+    });
+  }
+  firmInput.addEventListener('input', () => renderFirmSuggestions(firmInput.value));
+  firmInput.addEventListener('focus', () => { if (firmInput.value.trim()) renderFirmSuggestions(firmInput.value); });
+
+  document.addEventListener('click', e => {
+    if (!areaSelectBtn.contains(e.target) && !areaSelectPanel.contains(e.target)){
+      areaSelectPanel.classList.remove('open');
+    }
+    if (!firmInput.contains(e.target) && !firmSuggestionsEl.contains(e.target)){
+      firmSuggestionsEl.classList.remove('open');
+    }
+  });
+
+  // ---------- tabs ----------
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const view = tab.getAttribute('data-view');
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('view-' + view).classList.add('active');
+    });
+  });
+
+  // ---------- sorting ----------
+  document.getElementById('areaTable').querySelector('thead').addEventListener('click', e => {
+    const th = e.target.closest('th[data-sort]');
+    if (!th) return;
+    handleSort('areas', th.getAttribute('data-sort'));
+  });
+  document.getElementById('firmTable').querySelector('thead').addEventListener('click', e => {
+    const th = e.target.closest('th[data-sort]');
+    if (!th) return;
+    handleSort('firms', th.getAttribute('data-sort'));
+  });
+  function handleSort(view, key){
+    const s = sortState[view];
+    if (s.key === key) s.dir *= -1; else { s.key = key; s.dir = 1; }
+    renderAll();
+  }
+
+  // ---------- core computation ----------
+  function getPeriod(){
+    const start = periodStartEl.value ? new Date(periodStartEl.value) : null;
+    const end = periodEndEl.value ? new Date(periodEndEl.value) : null;
+    return { start, end };
+  }
+
+  function weeksBetween(start, end){
+    const weeks = [];
+    let cur = weekStartOf(start);
+    const last = weekStartOf(end);
+    while (cur <= last){
+      weeks.push(new Date(cur));
+      cur = addWeeks(cur, 1);
+    }
+    return weeks;
+  }
+
+  function renderAll(){
+    const { start, end } = getPeriod();
+    if (!start || !end || start > end){
+      document.getElementById('summaryGrid').innerHTML = '';
+      return;
+    }
+    const includeDeleted = includeDeletedEl.checked;
+    const weeks = weeksBetween(start, end);
+    const weekKeySet = new Set(weeks.map(w => w.getTime()));
+    const periodWeekCount = weeks.length;
+
+    const relevant = allSlots.filter(s => {
+      if (!includeDeleted && s.isDeleted) return false;
+      const wk = weekStartOf(s.weekStart).getTime();
+      return weekKeySet.has(wk);
+    });
+    // full timeline (not limited to the selected period) - needed to seed rolling 52-week
+    // usage and consecutive-run state correctly, and to know area contention at any week
+    const activeSlots = allSlots.filter(s => includeDeleted || !s.isDeleted);
+
+    const periodStartM = weeks.length ? weeks[0].getTime() : weekStartOf(start).getTime();
+    const periodEndM = weeks.length ? weeks[weeks.length-1].getTime() : weekStartOf(end).getTime();
+
+    // ---- full-timeline indexes for capacity simulation ----
+    const fullAreaWeekFirms = new Map(); // location -> Map(weekTime -> Map(firmName -> city))
+    const fullFirmAreaWeeks = new Map(); // firmName||location -> Set(weekTime), real bookings only
+    const fullLocationFirms = new Map(); // location -> Set(firmName), every firm that's ever booked there
+    activeSlots.forEach(s => {
+      const locKey = s.location || '(no location)';
+      const wk = weekStartOf(s.weekStart).getTime();
+      if (!fullAreaWeekFirms.has(locKey)) fullAreaWeekFirms.set(locKey, new Map());
+      const wm = fullAreaWeekFirms.get(locKey);
+      if (!wm.has(wk)) wm.set(wk, new Map());
+      wm.get(wk).set(s.firmName, s.city);
+      const fkey = s.firmName + '||' + locKey;
+      if (!fullFirmAreaWeeks.has(fkey)) fullFirmAreaWeeks.set(fkey, new Set());
+      fullFirmAreaWeeks.get(fkey).add(wk);
+      if (!fullLocationFirms.has(locKey)) fullLocationFirms.set(locKey, new Set());
+      fullLocationFirms.get(locKey).add(s.firmName);
+    });
+
+    const DEFAULT_LAPSED_THRESHOLD = 13; // default weeks booked in the prior 52wks to count as "established"
+    const priorWindowEndM = addWeeks(new Date(periodStartM), -1).getTime();
+    const priorWindowStartM = addWeeks(new Date(periodStartM), -52).getTime();
+
+    // A firm counts as "lapsed / at risk" for an area if it was solidly active in the 52 weeks
+    // immediately before this period (>= threshold weeks booked there, to discount ad-hoc
+    // one-off bookers) and its coverage there ends within (or before) this period - i.e. its
+    // last real booked week anywhere is at or before the period end, so nothing carries it
+    // through to the far side. This is who a new firm's request would effectively be displacing.
+    // The threshold defaults to 13 but can be overridden per area (e.g. to the number of weeks a
+    // new prospect is asking for, to check whether a similarly-sized firm just dropped off).
+    function findLapsedFirms(location, threshold){
+      const firms = fullLocationFirms.get(location);
+      if (!firms) return [];
+      const results = [];
+      firms.forEach(firmName => {
+        const weekSet = fullFirmAreaWeeks.get(firmName + '||' + location);
+        if (!weekSet) return;
+        let priorCount = 0;
+        let lastWeek = -Infinity;
+        weekSet.forEach(wk => {
+          if (wk >= priorWindowStartM && wk <= priorWindowEndM) priorCount++;
+          if (wk > lastWeek) lastWeek = wk;
+        });
+        if (priorCount >= threshold && lastWeek <= periodEndM){
+          results.push({ firmName, priorCount, lastWeek });
+        }
+      });
+      results.sort((a,b) => b.priorCount - a.priorCount);
+      return results;
+    }
+
+
+    const CAP_52WK = 26;
+    const MAX_CONSECUTIVE = 4;
+
+    // Walk from 52 weeks before the period start through to the period end, tracking:
+    //  - a sliding window of booked weeks (real + hypothetical) to enforce the 26-in-52 cap
+    //  - the length of the current consecutive run to enforce the 4-in-a-row rule
+    // Weeks before the period start use real bookings only (to seed accurate state).
+    // Weeks inside the period are also tested for "could this firm newly book it", and if so
+    // greedily counted as booked, to answer "how many bookable weeks are there in total".
+    function simulateFirmArea(firmName, location, periodStartM, periodEndM){
+      const bookedSet = fullFirmAreaWeeks.get(firmName + '||' + location) || new Set();
+      const areaWeeks = fullAreaWeekFirms.get(location) || new Map();
+
+      let consecutive = 0;
+      const windowWeeks = []; // ascending timestamps currently inside the trailing 52-week window
+      let bookableCount = 0;
+      const bookableList = []; // ascending timestamps of weeks a new booking could actually land
+      let used52AtPeriodEnd = 0;
+
+      let cur = addWeeks(new Date(periodStartM), -52);
+      const loopEnd = new Date(periodEndM);
+      while (cur.getTime() <= loopEnd.getTime()){
+        const wt = cur.getTime();
+        const windowFloor = addWeeks(cur, -51).getTime();
+        while (windowWeeks.length && windowWeeks[0] < windowFloor) windowWeeks.shift();
+
+        const reallyBooked = bookedSet.has(wt);
+        if (reallyBooked){
+          consecutive += 1;
+          windowWeeks.push(wt);
+        } else if (wt >= periodStartM && wt <= periodEndM){
+          const firmsThere = areaWeeks.get(wt);
+          const otherFirmsCount = firmsThere ? firmsThere.size : 0;
+          const wouldBeUsage = windowWeeks.length + 1;
+          if (otherFirmsCount >= 2 || wouldBeUsage > CAP_52WK || consecutive >= MAX_CONSECUTIVE){
+            consecutive = 0; // blocked: area full, cap reached, or needs a gap
+          } else {
+            bookableCount += 1;
+            bookableList.push(wt);
+            consecutive += 1;
+            windowWeeks.push(wt);
+          }
+        } else {
+          consecutive = 0; // real gap before the period, breaks the run
+        }
+
+        if (wt === periodEndM) used52AtPeriodEnd = windowWeeks.length;
+        cur = addWeeks(cur, 1);
+      }
+      return { bookableCount, bookableList, used52AtPeriodEnd };
+    }
+
+    // Same idea, but for a firm with NO booking history at all, i.e. a fresh prospect.
+    // Used as a new-business guide on the area availability tab: with no history to seed,
+    // this is simply "how many of this period's weeks could a brand new firm claim here",
+    // respecting the same 26-in-52 and 4-consecutive-week rules against real contention.
+    function simulateNewEntrant(location, periodStartM, periodEndM){
+      const areaWeeks = fullAreaWeekFirms.get(location) || new Map();
+      let consecutive = 0;
+      const windowWeeks = [];
+      let bookableCount = 0;
+      const bookableList = [];
+      let cur = new Date(periodStartM);
+      const loopEnd = new Date(periodEndM);
+      while (cur.getTime() <= loopEnd.getTime()){
+        const wt = cur.getTime();
+        const windowFloor = addWeeks(cur, -51).getTime();
+        while (windowWeeks.length && windowWeeks[0] < windowFloor) windowWeeks.shift();
+
+        const firmsThere = areaWeeks.get(wt);
+        const otherFirmsCount = firmsThere ? firmsThere.size : 0;
+        const wouldBeUsage = windowWeeks.length + 1;
+        if (otherFirmsCount >= 2 || wouldBeUsage > CAP_52WK || consecutive >= MAX_CONSECUTIVE){
+          consecutive = 0;
+        } else {
+          bookableCount += 1;
+          bookableList.push(wt);
+          consecutive += 1;
+          windowWeeks.push(wt);
+        }
+        cur = addWeeks(cur, 1);
+      }
+      return { bookableCount, bookableList };
+    }
+
+    // ---- build area map (area = Location/county, the shared feature-slot catchment) ----
+    const areaMap = new Map(); // location -> { location, region, weeks: Map(weekTime -> Map(firmName -> city)) }
+    relevant.forEach(s => {
+      const locKey = s.location || '(no location)';
+      let area = areaMap.get(locKey);
+      if (!area){
+        area = { location: locKey, region: s.region, weeks: new Map() };
+        areaMap.set(locKey, area);
+      }
+      const wk = weekStartOf(s.weekStart).getTime();
+      if (!area.weeks.has(wk)) area.weeks.set(wk, new Map());
+      area.weeks.get(wk).set(s.firmName, s.city);
+    });
+
+    let areaRows = Array.from(locationRegionMap.keys()).map(loc => {
+      const area = areaMap.get(loc) || { location: loc, region: locationRegionMap.get(loc), weeks: new Map() };
+      let openWeeks = 0, partialWeeks = 0, fullWeeks = 0;
+      const weekDetail = weeks.map(w => {
+        const booked = area.weeks.get(w.getTime()) || new Map();
+        const n = booked.size;
+        let state = 'open';
+        if (n === 1) { state = 'partial'; partialWeeks++; }
+        else if (n >= 2) { state = 'full'; fullWeeks++; }
+        else { openWeeks++; }
+        const firms = Array.from(booked.entries()).map(([firm, city]) => city ? (firm + ' (' + city + ')') : firm);
+        return { date: w, firms, state };
+      });
+      const sim = selectedFirm
+        ? simulateFirmArea(selectedFirm, area.location, periodStartM, periodEndM)
+        : simulateNewEntrant(area.location, periodStartM, periodEndM);
+      const bookablePerFirm = sim.bookableCount;
+      const bookableList = sim.bookableList;
+      const nextAvailable = bookableList.length ? bookableList[0] : null;
+      const rowWeeks = rowWeeksNeeded.get(area.location) || null;
+      const lapsedFirms = findLapsedFirms(area.location, rowWeeks || DEFAULT_LAPSED_THRESHOLD);
+      return {
+        location: area.location,
+        name: area.location,
+        region: area.region,
+        weeks: periodWeekCount, openWeeks, partialWeeks, fullWeeks,
+        bookableWeeks: openWeeks + partialWeeks,
+        bookableSlots: (openWeeks * 2) + partialWeeks,
+        bookablePerFirm,
+        bookableList, nextAvailable, rowWeeks,
+        lapsedFirms, lapsedRisk: lapsedFirms.length ? lapsedFirms[0].priorCount : -1,
+        weekDetail
+      };
+    });
+
+    if (selectedAreas.size){
+      areaRows = areaRows.filter(a => selectedAreas.has(a.location));
+    }
+
+    const as = sortState.areas;
+    areaRows.sort((a,b) => {
+      let av = a[as.key], bv = b[as.key];
+      if (as.key === 'nextAvailable'){
+        if (av === null && bv === null) return 0;
+        if (av === null) return 1;
+        if (bv === null) return -1;
+      }
+      if (typeof av === 'string') return av.localeCompare(bv) * as.dir;
+      return (av - bv) * as.dir;
+    });
+
+    // ---- build firm x area map (only pairs with a real booking in the selected period) ----
+    const pairMap = new Map(); // firmName||location -> { firmName, areaName, weeks:Set }
+    relevant.forEach(s => {
+      if (selectedFirm && s.firmName !== selectedFirm) return;
+      const locKey = s.location || '(no location)';
+      if (selectedAreas.size && !selectedAreas.has(locKey)) return;
+      const key = s.firmName + '||' + locKey;
+      let pair = pairMap.get(key);
+      if (!pair){
+        pair = { firmName: s.firmName, areaName: locKey, weeks: new Set() };
+        pairMap.set(key, pair);
+      }
+      pair.weeks.add(weekStartOf(s.weekStart).getTime());
+    });
+
+    document.getElementById('capNote').textContent = periodWeekCount + ' week' + (periodWeekCount===1?'':'s') + ' selected';
+
+    let firmRows = Array.from(pairMap.values()).map(p => {
+      const booked = p.weeks.size;
+      const { bookableCount, used52AtPeriodEnd } = simulateFirmArea(p.firmName, p.areaName, periodStartM, periodEndM);
+      let status = 'ok';
+      if (used52AtPeriodEnd >= CAP_52WK) status = 'over';
+      else if (used52AtPeriodEnd >= CAP_52WK - 3) status = 'near';
+      const fullWeekSet = fullFirmAreaWeeks.get(p.firmName + '||' + p.areaName);
+      const lastBooked = fullWeekSet && fullWeekSet.size ? Math.max(...fullWeekSet) : null;
+      return { name: p.firmName, area: p.areaName, booked, lastBooked, used52: used52AtPeriodEnd, cap: CAP_52WK, bookable: bookableCount, status };
+    });
+
+
+    const fs = sortState.firms;
+    firmRows.sort((a,b) => {
+      let av = a[fs.key], bv = b[fs.key];
+      if (fs.key === 'status'){
+        const order = { over:0, near:1, ok:2 };
+        av = order[a.status]; bv = order[b.status];
+      }
+      if (fs.key === 'lastBooked'){
+        if (av === null && bv === null) return 0;
+        if (av === null) return 1;
+        if (bv === null) return -1;
+      }
+      if (typeof av === 'string') return av.localeCompare(bv) * fs.dir;
+      return (av - bv) * fs.dir;
+    });
+
+    document.getElementById('areaFootnoteFirmPart').textContent = selectedFirm
+      ? ('showing ' + selectedFirm + '\u2019s actual opportunity here, worked forward from its own bookings and cap usage')
+      : 'a new-business guide: how many weeks a brand new firm with no booking history could claim here';
+
+    const historyNoteEl = document.getElementById('historyNote');
+    if (earliestDataWeekM !== null && periodStartM < earliestDataWeekM + 52*7*24*3600*1000){
+      const readyDate = fmtDateDisplay(new Date(earliestDataWeekM + 52*7*24*3600*1000));
+      historyNoteEl.style.display = 'block';
+      historyNoteEl.textContent = 'This file only has bookings from ' + fmtDateDisplay(new Date(earliestDataWeekM)) + ' onward, so there isn\u2019t a full 52 weeks of history behind this period start yet. The Risk: recently lapsed column will be quiet (or incomplete) until you pick a period starting on or after ' + readyDate + '.';
+    } else {
+      historyNoteEl.style.display = 'none';
+    }
+
+    renderSummary(areaRows, firmRows);
+    renderAreaTable(areaRows);
+    renderFirmTable(firmRows);
+    updateSortHeaders();
+  }
+
+  function renderSummary(areaRows, firmRows){
+    const totalBookable = areaRows.reduce((a,r)=>a+r.bookableWeeks,0);
+    const totalBookableSlots = areaRows.reduce((a,r)=>a+r.bookableSlots,0);
+    const totalBookablePerFirm = areaRows.reduce((a,r)=>a+r.bookablePerFirm,0);
+    const totalFull = areaRows.reduce((a,r)=>a+r.fullWeeks,0);
+    const overCapFirms = firmRows.filter(f=>f.status==='over').length;
+    const grid = document.getElementById('summaryGrid');
+    grid.innerHTML = [
+      stat('Areas in period', areaRows.length, ''),
+      stat('Bookable slot-weeks', totalBookable, 'open'),
+      stat('Bookable slots', totalBookableSlots, 'open'),
+      stat('Bookable for new firm', totalBookablePerFirm, 'open'),
+      stat('Fully booked', totalFull, 'full'),
+      stat('Over 52wk cap', overCapFirms, overCapFirms ? 'over' : '')
+    ].join('');
+  }
+  function stat(label, num, cls){
+    return '<div class="stat ' + cls + '"><div class="num mono">' + num.toLocaleString() + '</div><div class="label">' + label + '</div></div>';
+  }
+
+  function updateSortHeaders(){
+    document.querySelectorAll('#areaTable th[data-sort]').forEach(th => {
+      th.classList.toggle('sorted', th.getAttribute('data-sort') === sortState.areas.key);
+    });
+    document.querySelectorAll('#firmTable th[data-sort]').forEach(th => {
+      th.classList.toggle('sorted', th.getAttribute('data-sort') === sortState.firms.key);
+    });
+  }
+
+  function renderAreaTable(rows){
+    const tbody = document.getElementById('areaTbody');
+    const empty = document.getElementById('areaEmpty');
+    if (!rows.length){
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    tbody.innerHTML = rows.map(r => {
+      const strip = r.weekDetail.map(w => '<div class="sq ' + w.state + '" title="w/c ' + fmtDateDisplay(w.date) + ': ' + (w.firms.length ? escapeHtml(w.firms.join(', ')) : 'open') + '"></div>').join('');
+      const expanded = expandedOffice === r.location;
+      const nextAvailableCell = r.nextAvailable !== null ? fmtDateDisplay(new Date(r.nextAvailable)) : '<span style="color:var(--ink-faint);">none in period</span>';
+      const requestCell = '<input type="number" class="row-weeks-input" data-loc="' + escapeHtml(r.location) + '" min="1" max="52" value="' + (r.rowWeeks || '') + '" placeholder="e.g. 6" title="Weeks a prospective firm is requesting">';
+      const thresholdUsed = r.rowWeeks || 13;
+      const riskCell = r.lapsedFirms.length
+        ? '<span class="pill over" title="' + escapeHtml(r.lapsedFirms.map(f => f.firmName + ' (' + f.priorCount + ' wks in prior 52, coverage ends ' + fmtDateDisplay(new Date(f.lastWeek)) + ')').join('; ')) + '">' + escapeHtml(r.lapsedFirms[0].firmName) + (r.lapsedFirms.length > 1 ? ' +' + (r.lapsedFirms.length - 1) : '') + '</span>'
+        : '<span style="color:var(--ink-faint); font-size:11.5px;">none \u2265' + thresholdUsed + ' wks</span>';
+      let html = '<tr class="area-row ' + (expanded?'expanded':'') + '" data-office="' + escapeHtml(r.location) + '">' +
+        '<td><span class="chev">\u25B8</span></td>' +
+        '<td><div class="area-name">' + escapeHtml(r.name) + '</div><div class="area-sub">' + escapeHtml(r.region || '') + '</div></td>' +
+        '<td class="mono">' + r.weeks + '</td>' +
+        '<td class="mono" style="font-weight:700; color:var(--open);">' + r.bookablePerFirm + '</td>' +
+        '<td class="mono">' + nextAvailableCell + '</td>' +
+        '<td class="mono">' + requestCell + '</td>' +
+        '<td class="mono">' + r.openWeeks + '</td>' +
+        '<td class="mono">' + r.partialWeeks + '</td>' +
+        '<td class="mono">' + r.fullWeeks + '</td>' +
+        '<td><div class="strip">' + strip + '</div></td>' +
+        '<td>' + riskCell + '</td>' +
+        '</tr>';
+      if (expanded){
+        html += '<tr class="detail-row"><td colspan="11">' + renderWeekDetail(r) + '</td></tr>';
+      }
+      return html;
+    }).join('') + renderAreaTotalsRow(rows);
+
+    tbody.querySelectorAll('tr.area-row').forEach(tr => {
+      tr.addEventListener('click', e => {
+        if (e.target.closest('.row-weeks-input')) return;
+        const id = tr.getAttribute('data-office');
+        expandedOffice = (expandedOffice === id) ? null : id;
+        renderAll();
+      });
+    });
+    tbody.querySelectorAll('.row-weeks-input').forEach(input => {
+      input.addEventListener('click', e => e.stopPropagation());
+      input.addEventListener('change', () => {
+        const loc = input.getAttribute('data-loc');
+        const cap = parseInt(input.getAttribute('max'), 10) || 52;
+        let n = parseInt(input.value, 10);
+        if (Number.isFinite(n) && n > 0){
+          if (n > cap) n = cap;
+          rowWeeksNeeded.set(loc, n);
+        } else {
+          rowWeeksNeeded.delete(loc);
+        }
+        renderAll();
+      });
+    });
+  }
+
+  function renderAreaTotalsRow(rows){
+    const sum = key => rows.reduce((a,r) => a + r[key], 0);
+    const periodWeeks = rows.length ? rows[0].weeks : 0;
+    const riskCount = rows.filter(r => r.lapsedFirms.length).length;
+    return '<tr class="total-row">' +
+      '<td></td>' +
+      '<td>Total (' + rows.length + ' area' + (rows.length===1?'':'s') + ')</td>' +
+      '<td class="mono">' + periodWeeks + '</td>' +
+      '<td class="mono">' + sum('bookablePerFirm') + '</td>' +
+      '<td></td>' +
+      '<td></td>' +
+      '<td class="mono">' + sum('openWeeks') + '</td>' +
+      '<td class="mono">' + sum('partialWeeks') + '</td>' +
+      '<td class="mono">' + sum('fullWeeks') + '</td>' +
+      '<td></td>' +
+      '<td class="mono">' + riskCount + ' at risk</td>' +
+      '</tr>';
+  }
+
+  function renderWeekDetail(r){
+    const rows = r.weekDetail.map(w => {
+      const pill = '<span class="pill ' + w.state + '">' + w.state + '</span>';
+      const firms = w.firms.length ? escapeHtml(w.firms.join(', ')) : '\u2014';
+      return '<tr><td class="mono">' + fmtDateDisplay(w.date) + '</td><td>' + pill + '</td><td class="firms">' + firms + '</td></tr>';
+    }).join('');
+    return '<table class="week-table"><thead><tr><th>Week of</th><th>Status</th><th>Booked by</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  function renderFirmTable(rows){
+    const tbody = document.getElementById('firmTbody');
+    const empty = document.getElementById('firmEmpty');
+    if (!rows.length){
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    tbody.innerHTML = rows.map(r => {
+      const pct = Math.min(100, Math.max(0, (r.used52 / r.cap) * 100));
+      const barClass = r.status === 'over' ? 'over' : (r.status === 'near' ? 'near' : 'ok');
+      const pillClass = r.status === 'over' ? 'over' : (r.status === 'near' ? 'near' : 'ok');
+      const statusLabel = r.status === 'over' ? 'Over cap' : (r.status === 'near' ? 'Near cap' : 'OK');
+      const lastBookedCell = r.lastBooked !== null ? fmtDateDisplay(new Date(r.lastBooked)) : '<span style="color:var(--ink-faint);">\u2014</span>';
+      return '<tr>' +
+        '<td class="area-name">' + escapeHtml(r.name) + '</td>' +
+        '<td>' + escapeHtml(r.area) + '</td>' +
+        '<td class="mono">' + r.booked + '</td>' +
+        '<td class="mono">' + lastBookedCell + '</td>' +
+        '<td class="mono">' + r.used52 + ' / ' + r.cap + '</td>' +
+        '<td class="mono" style="font-weight:700;">' + r.bookable + '</td>' +
+        '<td><div class="capbar"><div class="fill ' + barClass + '" style="width:' + pct + '%"></div></div></td>' +
+        '<td><span class="pill ' + pillClass + '">' + statusLabel + '</span></td>' +
+        '</tr>';
+    }).join('') + renderFirmTotalsRow(rows);
+  }
+
+  function renderFirmTotalsRow(rows){
+    const sum = key => rows.reduce((a,r) => a + r[key], 0);
+    const overCount = rows.filter(r => r.status === 'over').length;
+    return '<tr class="total-row">' +
+      '<td>Total (' + rows.length + ' pair' + (rows.length===1?'':'s') + ')</td>' +
+      '<td></td>' +
+      '<td class="mono">' + sum('booked') + '</td>' +
+      '<td></td>' +
+      '<td></td>' +
+      '<td class="mono">' + sum('bookable') + '</td>' +
+      '<td></td>' +
+      '<td class="mono">' + overCount + ' over</td>' +
+      '</tr>';
+  }
+
+})();
+</script>
+</body>
+</html>
