@@ -285,6 +285,15 @@
   .capbar .fill.near{ background:var(--partial); }
   .capbar .fill.over{ background:var(--over); }
 
+  .export-bar{ display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:10px; margin:0 0 10px; }
+  .export-note{ font-size:12px; color:var(--ink-faint); margin-right:auto; }
+  .export-btn{
+    border:1px solid var(--open); background:var(--surface); color:var(--open); font-weight:600;
+    font-size:12.5px; padding:6px 14px; border-radius:20px; cursor:pointer;
+    transition:background .12s ease, color .12s ease;
+  }
+  .export-btn:hover:not(:disabled){ background:var(--open); color:#fff; }
+  .export-btn:disabled{ opacity:.45; cursor:default; }
   .empty-msg{ padding:40px 10px; text-align:center; color:var(--ink-faint); font-size:13.5px; }
   .history-note{
     background:var(--partial-bg); color:var(--partial); border:1px solid #EAD3A8;
@@ -292,7 +301,6 @@
   }
   tr.total-row{ font-weight:700; background:#FAFAFB; }
   tr.total-row td{ border-top:2px solid var(--line); border-bottom:none; padding:10px; color:var(--ink); }
-  .footnote{ color:var(--ink-faint); font-size:12px; margin-top:14px; }
   .chev{ display:inline-block; width:14px; color:var(--ink-faint); transition:transform .12s ease; }
   .area-row.expanded .chev{ transform:rotate(90deg); }
 </style>
@@ -307,7 +315,7 @@
 
   <div id="dropzone">
     <div><strong>Drop the export here</strong>, or click to choose a file</div>
-    <div class="hint">HTML export, read in your browser and never uploaded</div>
+    <div class="hint">Feature Slots by Office export (.html)</div>
   </div>
   <input type="file" id="fileInput" accept=".html,.htm">
 
@@ -343,6 +351,10 @@
           <input type="checkbox" id="includeDeleted">
           <label style="margin:0; text-transform:none; font-size:13px; font-weight:400; color:var(--ink-soft);">Include deleted slots</label>
         </div>
+        <div class="field toggle-row" style="padding-bottom:7px;">
+          <input type="checkbox" id="includeNames">
+          <label style="margin:0; text-transform:none; font-size:13px; font-weight:400; color:var(--ink-soft);" title="Applies to the area downloads. The firm capacity download always lists firms.">Include firm names in area downloads</label>
+        </div>
       </div>
       <div class="controls-grid" style="margin-top:16px;">
         <div class="field" style="position:relative;">
@@ -375,6 +387,11 @@
     </div>
 
     <div class="view active" id="view-areas">
+      <div class="export-bar">
+        <span class="export-note">Downloads are created in your browser. Nothing is uploaded or stored.</span>
+        <button type="button" class="export-btn" id="btnAreaCsv">Download areas (CSV)</button>
+        <button type="button" class="export-btn" id="btnWeeklyCsv">Download week by week (CSV)</button>
+      </div>
       <div class="panel" style="padding:0; overflow-x:auto;">
         <table class="data" id="areaTable">
           <thead>
@@ -389,17 +406,20 @@
               <th data-sort="partialWeeks">Partial</th>
               <th data-sort="fullWeeks">Full</th>
               <th>Availability</th>
-              <th data-sort="lapsedRisk">Risk: recently lapsed</th>
+              <th data-sort="endingTenure">Bookings ending</th>
             </tr>
           </thead>
           <tbody id="areaTbody"></tbody>
         </table>
         <div class="empty-msg" id="areaEmpty" style="display:none;">No areas match the current filters.</div>
       </div>
-      <p class="footnote"><b>Bookable</b> is <span id="areaFootnoteFirmPart">a new-business guide: how many weeks a brand new firm with no booking history could claim here</span>, respecting the 26-in-52-week cap and the 4-consecutive-week limit; pick a firm above and it switches to that firm's own figure instead. <b>Bookable slots</b> (top summary) counts the actual free slot units rather than weeks, an Open week is worth 2, a Partial week is worth 1. <b>Next available</b> is the first bookable week in this period. Enter the number of weeks a prospective firm is asking for into <b>Weeks requested</b> on any row, this sets the bar for <b>Risk: recently lapsed</b> on that row: a firm that booked at least that many weeks here in the prior 52 weeks but has nothing booked in this period, similarly sized churn to what's being discussed now, and a candidate for a renewal call before offering the slot elsewhere. Leave it blank and the risk check defaults to 13 weeks. <b>Open</b> = 0 firms booked, <b>Partial</b> = 1 of 2 booked, <b>Full</b> = 2 of 2 booked. Click a row for the week-by-week breakdown.</p>
     </div>
 
     <div class="view" id="view-firms">
+      <div class="export-bar">
+        <span class="export-note">Downloads are created in your browser. Nothing is uploaded or stored.</span>
+        <button type="button" class="export-btn" id="btnFirmCsv">Download firm capacity (CSV)</button>
+      </div>
       <div class="panel" style="padding:0; overflow-x:auto;">
         <table class="data" id="firmTable">
           <thead>
@@ -418,7 +438,6 @@
         </table>
         <div class="empty-msg" id="firmEmpty" style="display:none;">No firm/area combinations match the current filters.</div>
       </div>
-      <p class="footnote">Each firm can hold at most 26 slot-weeks in any trailing 52 weeks at a single area, and cannot hold more than 4 consecutive weeks without a gap. <b>Bookable weeks</b> is how many weeks in the selected period this firm could still take at this area, working forward from its actual bookings and respecting both rules (<span id="capNote"></span>).</p>
     </div>
 
   </div>
@@ -431,12 +450,13 @@
   const REGION_LOOKUP = {"Ayrshire": "Scotland", "Barking and Dagenham": "London", "Barnet": "London", "Barnsley": "Yorkshire and The Humber", "Bedford": "East of England", "Bexley": "London", "Birmingham": "West Midlands", "Blackburn with Darwen": "North West", "Blackpool": "North West", "Blaenau Gwent": "Wales", "Bolton": "North West", "Borders": "Scotland", "Bournemouth": "South West", "Bracknell Forest": "South East", "Bradford": "Yorkshire and The Humber", "Brent": "London", "Bridgend": "Wales", "Brighton and Hove": "South East", "Bristol": "South West", "Bromley": "London", "Buckinghamshire": "South East", "Bury": "North West", "Caerphilly": "Wales", "Calderdale": "Yorkshire and The Humber", "Cambridgeshire": "East of England", "Camden": "London", "Cardiff": "Wales", "Carmarthenshire": "Wales", "Central Bedfordshire": "East of England", "Central Scotland": "Scotland", "Ceredigion": "Wales", "Cheshire East": "North West", "Cheshire West and Chester": "North West", "City of London": "London", "Conwy": "Wales", "Cornwall": "South West", "County Durham": "North East", "Coventry": "West Midlands", "Croydon": "London", "Cumbria": "North West", "Darlington": "North East", "Denbighshire": "Wales", "Derby": "East Midlands", "Derbyshire": "East Midlands", "Devon": "South West", "Doncaster": "Yorkshire and The Humber", "Dorset": "South West", "Dudley": "West Midlands", "Dumfries and Galloway": "Scotland", "Dunbartonshire and Argyll and Bute": "Scotland", "Ealing": "London", "East Riding of Yorkshire": "Yorkshire and The Humber", "East Sussex": "South East", "Enfield": "London", "Essex": "East of England", "Falkirk": "Scotland", "Fife": "Scotland", "Flintshire": "Wales", "Gateshead": "North East", "Glasgow": "Scotland", "Gloucestershire": "South West", "Grampian": "Scotland", "Greenwich": "London", "Gwynedd": "Wales", "Hackney": "London", "Halton": "North West", "Hammersmith and Fulham": "London", "Hampshire": "South East", "Harrow": "London", "Hartlepool": "North East", "Havering": "London", "Herefordshire": "West Midlands", "Hertfordshire": "East of England", "Highlands and Western Isles": "Scotland", "Hillingdon": "London", "Hounslow": "London", "Isle of Anglesey": "Wales", "Isle of Wight": "South East", "Isles of Scilly": "South West", "Islington": "London", "Kensington and Chelsea": "London", "Kent": "South East", "Kingston upon Hull": "Yorkshire and The Humber", "Kingston upon Thames": "London", "Kirklees": "Yorkshire and The Humber", "Knowsley": "North West", "Lambeth": "London", "Lancashire": "North West", "Leeds": "Yorkshire and The Humber", "Leicester": "East Midlands", "Leicestershire": "East Midlands", "Lewisham": "London", "Lincolnshire": "East Midlands", "Liverpool": "North West", "Lothian": "Scotland", "Luton": "East of England", "Manchester": "North West", "Medway": "South East", "Merthyr Tydfil": "Wales", "Merton": "London", "Middlesbrough": "North East", "Milton Keynes": "South East", "Monmouthshire": "Wales", "Neath Port Talbot": "Wales", "Newcastle upon Tyne": "North East", "Newham": "London", "Newport": "Wales", "Norfolk": "East of England", "North East Lincolnshire": "Yorkshire and The Humber", "North Lincolnshire": "Yorkshire and The Humber", "North Somerset": "South West", "North Tyneside": "North East", "North Yorkshire": "Yorkshire and The Humber", "Northamptonshire": "East Midlands", "Northern Ireland": "Northern Ireland", "Northumberland": "North East", "Nottingham": "East Midlands", "Nottinghamshire": "East Midlands", "Oldham": "North West", "Orkney and Shetland": "Scotland", "Oxfordshire": "South East", "Pembrokeshire": "Wales", "Peterborough": "East of England", "Plymouth": "South West", "Poole": "South West", "Portsmouth": "South East", "Powys": "Wales", "Reading": "South East", "Redbridge": "London", "Redcar and Cleveland": "North East", "Renfrewshire": "Scotland", "Rhondda Cynon Taf": "Wales", "Richmond upon Thames": "London", "Rochdale": "North West", "Rotherham": "Yorkshire and The Humber", "Rutland": "East Midlands", "Salford": "North West", "Sandwell": "West Midlands", "Sefton": "North West", "Sheffield": "Yorkshire and The Humber", "Shropshire": "West Midlands", "Slough": "South East", "Solihull": "West Midlands", "Somerset": "South West", "South Gloucestershire": "South West", "South Tyneside": "North East", "Southampton": "South East", "Southend-on-Sea": "East of England", "Southwark": "London", "St. Helens": "North West", "Staffordshire": "West Midlands", "Stockport": "North West", "Stockton-on-Tees": "North East", "Stoke-on-Trent": "West Midlands", "Suffolk": "East of England", "Sunderland": "North East", "Surrey": "South East", "Sutton": "London", "Swindon": "South West", "Tameside": "North West", "Tayside": "Scotland", "Telford and Wrekin": "West Midlands", "Thurrock": "East of England", "Torbay": "South West", "Torfaen": "Wales", "Tower Hamlets": "London", "Trafford": "North West", "Vale of Glamorgan": "Wales", "Wakefield": "Yorkshire and The Humber", "Walsall": "West Midlands", "Waltham Forest": "London", "Wandsworth": "London", "Warrington": "North West", "Warwickshire": "West Midlands", "West Berkshire": "South East", "West Sussex": "South East", "Westminster": "London", "Wigan": "North West", "Wiltshire": "South West", "Wirral": "North West", "Wokingham": "South East", "Wolverhampton": "West Midlands", "Worcestershire": "West Midlands", "Wrexham": "Wales", "York": "Yorkshire and The Humber"};
 
   let allSlots = [];
+  let exportState = { areaRows: [], firmRows: [], startM: null, endM: null };
   let earliestDataWeekM = null;
   let sortState = { areas: { key:'bookablePerFirm', dir:-1 }, firms: { key:'bookable', dir:1 } };
   let expandedOffice = null;
   let selectedAreas = new Set(); // empty = all areas
-  let selectedFirm = null; // null = new-business (new entrant) mode
-  let rowWeeksNeeded = new Map(); // location -> requested weeks (per-row, user-entered)
+  let selectedFirm = null; // null = no firm selected: models a firm with no booking history
+  let rowWeeksRequested = new Map(); // location -> requested weeks (per-row, user-entered)
   let regionGroups = new Map(); // region -> sorted array of locations
   let locationRegionMap = new Map(); // location -> region, canonical list of every known area
   let allFirmNames = [];
@@ -578,7 +598,7 @@
   const firmSuggestionsEl = document.getElementById('firmSuggestions');
   const firmChipEl = document.getElementById('firmChip');
 
-  // Feature-slot weeks run Sunday to Saturday (every startDt in the export lands on a
+  // Feature-slot weeks run Sunday to Saturday (every week-start date in the export is a
   // Sunday), so "the start of the week" for any date must floor to that Sunday.
   function weekStartOf(d){
     const dt = new Date(d);
@@ -587,7 +607,14 @@
     dt.setHours(0,0,0,0);
     return dt;
   }
-  function fmtDateInput(d){ return d.toISOString().slice(0,10); }
+  function fmtDateInput(d){
+    // local date parts, not toISOString(), which shifts by an hour in British Summer Time
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function parseDateInput(v){
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || '');
+    return m ? new Date(+m[1], +m[2]-1, +m[3]) : null;
+  }
   function fmtDateDisplay(d){
     return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
   }
@@ -808,8 +835,8 @@
 
   // ---------- core computation ----------
   function getPeriod(){
-    const start = periodStartEl.value ? new Date(periodStartEl.value) : null;
-    const end = periodEndEl.value ? new Date(periodEndEl.value) : null;
+    const start = parseDateInput(periodStartEl.value);
+    const end = parseDateInput(periodEndEl.value);
     return { start, end };
   }
 
@@ -865,18 +892,15 @@
       fullLocationFirms.get(locKey).add(s.firmName);
     });
 
-    const DEFAULT_LAPSED_THRESHOLD = 13; // default weeks booked in the prior 52wks to count as "established"
+    const DEFAULT_TENURE_THRESHOLD = 13; // default weeks booked in the prior 52wks to count as "established"
     const priorWindowEndM = addWeeks(new Date(periodStartM), -1).getTime();
     const priorWindowStartM = addWeeks(new Date(periodStartM), -52).getTime();
 
-    // A firm counts as "lapsed / at risk" for an area if it was solidly active in the 52 weeks
-    // immediately before this period (>= threshold weeks booked there, to discount ad-hoc
-    // one-off bookers) and its coverage there ends within (or before) this period - i.e. its
-    // last real booked week anywhere is at or before the period end, so nothing carries it
-    // through to the far side. This is who a new firm's request would effectively be displacing.
-    // The threshold defaults to 13 but can be overridden per area (e.g. to the number of weeks a
-    // new prospect is asking for, to check whether a similarly-sized firm just dropped off).
-    function findLapsedFirms(location, threshold){
+    // A firm is flagged as ending in an area if it had at least the threshold number of weeks
+    // there in the 52 weeks before this period (which filters out occasional bookers) and its
+    // last booked week anywhere is on or before the period end. The threshold defaults to 13
+    // and can be set per area.
+    function findEndingFirms(location, threshold){
       const firms = fullLocationFirms.get(location);
       if (!firms) return [];
       const results = [];
@@ -950,11 +974,9 @@
       return { bookableCount, bookableList, used52AtPeriodEnd };
     }
 
-    // Same idea, but for a firm with NO booking history at all, i.e. a fresh prospect.
-    // Used as a new-business guide on the area availability tab: with no history to seed,
-    // this is simply "how many of this period's weeks could a brand new firm claim here",
-    // respecting the same 26-in-52 and 4-consecutive-week rules against real contention.
-    function simulateNewEntrant(location, periodStartM, periodEndM){
+    // Simulates a firm with no booking history: how many of this period's weeks it could take
+    // against current bookings, under the same 26-in-52 and 4-consecutive-week rules.
+    function simulateNoHistory(location, periodStartM, periodEndM){
       const areaWeeks = fullAreaWeekFirms.get(location) || new Map();
       let consecutive = 0;
       const windowWeeks = [];
@@ -1012,12 +1034,12 @@
       });
       const sim = selectedFirm
         ? simulateFirmArea(selectedFirm, area.location, periodStartM, periodEndM)
-        : simulateNewEntrant(area.location, periodStartM, periodEndM);
+        : simulateNoHistory(area.location, periodStartM, periodEndM);
       const bookablePerFirm = sim.bookableCount;
       const bookableList = sim.bookableList;
       const nextAvailable = bookableList.length ? bookableList[0] : null;
-      const rowWeeks = rowWeeksNeeded.get(area.location) || null;
-      const lapsedFirms = findLapsedFirms(area.location, rowWeeks || DEFAULT_LAPSED_THRESHOLD);
+      const requestedWeeks = rowWeeksRequested.get(area.location) || null;
+      const endingFirms = findEndingFirms(area.location, requestedWeeks || DEFAULT_TENURE_THRESHOLD);
       return {
         location: area.location,
         name: area.location,
@@ -1026,8 +1048,8 @@
         bookableWeeks: openWeeks + partialWeeks,
         bookableSlots: (openWeeks * 2) + partialWeeks,
         bookablePerFirm,
-        bookableList, nextAvailable, rowWeeks,
-        lapsedFirms, lapsedRisk: lapsedFirms.length ? lapsedFirms[0].priorCount : -1,
+        bookableList, nextAvailable, requestedWeeks,
+        endingFirms, endingTenure: endingFirms.length ? endingFirms[0].priorCount : -1,
         weekDetail
       };
     });
@@ -1063,7 +1085,6 @@
       pair.weeks.add(weekStartOf(s.weekStart).getTime());
     });
 
-    document.getElementById('capNote').textContent = periodWeekCount + ' week' + (periodWeekCount===1?'':'s') + ' selected';
 
     let firmRows = Array.from(pairMap.values()).map(p => {
       const booked = p.weeks.size;
@@ -1093,18 +1114,20 @@
       return (av - bv) * fs.dir;
     });
 
-    document.getElementById('areaFootnoteFirmPart').textContent = selectedFirm
-      ? ('showing ' + selectedFirm + '\u2019s actual opportunity here, worked forward from its own bookings and cap usage')
-      : 'a new-business guide: how many weeks a brand new firm with no booking history could claim here';
 
     const historyNoteEl = document.getElementById('historyNote');
     if (earliestDataWeekM !== null && periodStartM < earliestDataWeekM + 52*7*24*3600*1000){
       const readyDate = fmtDateDisplay(new Date(earliestDataWeekM + 52*7*24*3600*1000));
       historyNoteEl.style.display = 'block';
-      historyNoteEl.textContent = 'This file only has bookings from ' + fmtDateDisplay(new Date(earliestDataWeekM)) + ' onward, so there isn\u2019t a full 52 weeks of history behind this period start yet. The Risk: recently lapsed column will be quiet (or incomplete) until you pick a period starting on or after ' + readyDate + '.';
+      historyNoteEl.textContent = 'This file only has bookings from ' + fmtDateDisplay(new Date(earliestDataWeekM)) + ' onward, so there isn\u2019t a full 52 weeks of history behind this period start yet. The Bookings ending column will be quiet (or incomplete) until you pick a period starting on or after ' + readyDate + '.';
     } else {
       historyNoteEl.style.display = 'none';
     }
+
+    exportState = { areaRows, firmRows, startM: periodStartM, endM: periodEndM };
+    document.getElementById('btnAreaCsv').disabled = !areaRows.length;
+    document.getElementById('btnWeeklyCsv').disabled = !areaRows.length;
+    document.getElementById('btnFirmCsv').disabled = !firmRows.length;
 
     renderSummary(areaRows, firmRows);
     renderAreaTable(areaRows);
@@ -1154,11 +1177,11 @@
       const strip = r.weekDetail.map(w => '<div class="sq ' + w.state + '" title="w/c ' + fmtDateDisplay(w.date) + ': ' + (w.firms.length ? escapeHtml(w.firms.join(', ')) : 'open') + '"></div>').join('');
       const expanded = expandedOffice === r.location;
       const nextAvailableCell = r.nextAvailable !== null ? fmtDateDisplay(new Date(r.nextAvailable)) : '<span style="color:var(--ink-faint);">none in period</span>';
-      const requestCell = '<input type="number" class="row-weeks-input" data-loc="' + escapeHtml(r.location) + '" min="1" max="52" value="' + (r.rowWeeks || '') + '" placeholder="e.g. 6" title="Weeks a prospective firm is requesting">';
-      const thresholdUsed = r.rowWeeks || 13;
-      const riskCell = r.lapsedFirms.length
-        ? '<span class="pill over" title="' + escapeHtml(r.lapsedFirms.map(f => f.firmName + ' (' + f.priorCount + ' wks in prior 52, coverage ends ' + fmtDateDisplay(new Date(f.lastWeek)) + ')').join('; ')) + '">' + escapeHtml(r.lapsedFirms[0].firmName) + (r.lapsedFirms.length > 1 ? ' +' + (r.lapsedFirms.length - 1) : '') + '</span>'
-        : '<span style="color:var(--ink-faint); font-size:11.5px;">none \u2265' + thresholdUsed + ' wks</span>';
+      const requestCell = '<input type="number" class="row-weeks-input" data-loc="' + escapeHtml(r.location) + '" min="1" max="52" value="' + (r.requestedWeeks || '') + '" placeholder="e.g. 6" title="Weeks requested by the firm">';
+      const thresholdUsed = r.requestedWeeks || 13;
+      const endingCell = r.endingFirms.length
+        ? '<span class="pill over" title="' + escapeHtml(r.endingFirms.map(f => f.firmName + ' (' + f.priorCount + ' wks in prior 52, coverage ends ' + fmtDateDisplay(new Date(f.lastWeek)) + ')').join('; ')) + '">' + escapeHtml(r.endingFirms[0].firmName) + (r.endingFirms.length > 1 ? ' +' + (r.endingFirms.length - 1) : '') + '</span>'
+        : '<span style="color:var(--ink-faint); font-size:11.5px;">none ending (\u2265' + thresholdUsed + ' wks)</span>';
       let html = '<tr class="area-row ' + (expanded?'expanded':'') + '" data-office="' + escapeHtml(r.location) + '">' +
         '<td><span class="chev">\u25B8</span></td>' +
         '<td><div class="area-name">' + escapeHtml(r.name) + '</div><div class="area-sub">' + escapeHtml(r.region || '') + '</div></td>' +
@@ -1170,7 +1193,7 @@
         '<td class="mono">' + r.partialWeeks + '</td>' +
         '<td class="mono">' + r.fullWeeks + '</td>' +
         '<td><div class="strip">' + strip + '</div></td>' +
-        '<td>' + riskCell + '</td>' +
+        '<td>' + endingCell + '</td>' +
         '</tr>';
       if (expanded){
         html += '<tr class="detail-row"><td colspan="11">' + renderWeekDetail(r) + '</td></tr>';
@@ -1194,9 +1217,9 @@
         let n = parseInt(input.value, 10);
         if (Number.isFinite(n) && n > 0){
           if (n > cap) n = cap;
-          rowWeeksNeeded.set(loc, n);
+          rowWeeksRequested.set(loc, n);
         } else {
-          rowWeeksNeeded.delete(loc);
+          rowWeeksRequested.delete(loc);
         }
         renderAll();
       });
@@ -1206,7 +1229,7 @@
   function renderAreaTotalsRow(rows){
     const sum = key => rows.reduce((a,r) => a + r[key], 0);
     const periodWeeks = rows.length ? rows[0].weeks : 0;
-    const riskCount = rows.filter(r => r.lapsedFirms.length).length;
+    const endingCount = rows.filter(r => r.endingFirms.length).length;
     return '<tr class="total-row">' +
       '<td></td>' +
       '<td>Total (' + rows.length + ' area' + (rows.length===1?'':'s') + ')</td>' +
@@ -1218,7 +1241,7 @@
       '<td class="mono">' + sum('partialWeeks') + '</td>' +
       '<td class="mono">' + sum('fullWeeks') + '</td>' +
       '<td></td>' +
-      '<td class="mono">' + riskCount + ' at risk</td>' +
+      '<td class="mono">' + endingCount + ' ending</td>' +
       '</tr>';
   }
 
@@ -1273,6 +1296,75 @@
       '<td class="mono">' + overCount + ' over</td>' +
       '</tr>';
   }
+
+  // ---------- CSV downloads (built in the browser; nothing leaves the machine) ----------
+  function csvCell(v){
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'number') return String(v);
+    let t = String(v);
+    if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; // stop spreadsheets treating text as a formula
+    if (/[",\r\n]/.test(t)) t = '"' + t.replace(/"/g, '""') + '"';
+    return t;
+  }
+  function downloadCsv(filename, rows){
+    const csv = '\ufeff' + rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  function exportSpan(){
+    return fmtDateInput(new Date(exportState.startM)) + '_to_' + fmtDateInput(new Date(exportState.endM));
+  }
+  function bookableBasis(withNames){
+    if (!selectedFirm) return 'Firm with no booking history';
+    return withNames ? selectedFirm : 'Selected firm';
+  }
+
+  document.getElementById('btnAreaCsv').addEventListener('click', () => {
+    const names = document.getElementById('includeNames').checked;
+    const head = ['Area','Region','Weeks in period','Bookable','Bookable for','Next available','Weeks requested','Open','Partial','Full','Firms ending'];
+    if (names) head.push('Ending firm names');
+    const rows = [head];
+    exportState.areaRows.forEach(r => {
+      const row = [r.name, r.region || '', r.weeks, r.bookablePerFirm, bookableBasis(names),
+        r.nextAvailable !== null ? fmtDateInput(new Date(r.nextAvailable)) : '',
+        r.requestedWeeks || '', r.openWeeks, r.partialWeeks, r.fullWeeks, r.endingFirms.length];
+      if (names) row.push(r.endingFirms.map(f => f.firmName + ' (' + f.priorCount + ' wks, ends ' + fmtDateInput(new Date(f.lastWeek)) + ')').join('; '));
+      rows.push(row);
+    });
+    downloadCsv('slot-availability-areas_' + exportSpan() + '.csv', rows);
+  });
+
+  document.getElementById('btnWeeklyCsv').addEventListener('click', () => {
+    const names = document.getElementById('includeNames').checked;
+    const head = ['Area','Region','Week commencing','Status','Free slots'];
+    if (names) head.push('Booked by');
+    const rows = [head];
+    exportState.areaRows.forEach(r => {
+      r.weekDetail.forEach(w => {
+        const free = w.state === 'open' ? 2 : (w.state === 'partial' ? 1 : 0);
+        const row = [r.name, r.region || '', fmtDateInput(new Date(w.date)),
+          w.state.charAt(0).toUpperCase() + w.state.slice(1), free];
+        if (names) row.push(w.firms.join('; '));
+        rows.push(row);
+      });
+    });
+    downloadCsv('slot-availability-weekly_' + exportSpan() + '.csv', rows);
+  });
+
+  document.getElementById('btnFirmCsv').addEventListener('click', () => {
+    const label = { over: 'Over cap', near: 'Near cap', ok: 'OK' };
+    const rows = [['Firm','Area','Booked in period','Last booked week','52wk usage','Cap','Bookable weeks','Status']];
+    exportState.firmRows.forEach(r => {
+      rows.push([r.name, r.area, r.booked,
+        r.lastBooked !== null ? fmtDateInput(new Date(r.lastBooked)) : '',
+        r.used52, r.cap, r.bookable, label[r.status] || r.status]);
+    });
+    downloadCsv('firm-capacity_' + exportSpan() + '.csv', rows);
+  });
 
 })();
 </script>
