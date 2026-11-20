@@ -406,13 +406,13 @@
               <th data-sort="name">Area</th>
               <th data-sort="weeks">Weeks in period</th>
               <th data-sort="bookableSlots" title="Every free slot in the area across the period: an open week has 2, a partial week has 1">Available slots</th>
-              <th data-sort="bookedPct" title="Booked slots as a share of all slots in the period (2 per week)">Booked capacity</th>
               <th data-sort="bookablePerFirm">Bookable</th>
               <th data-sort="nextAvailable">Next available</th>
               <th>Weeks requested</th>
               <th data-sort="openWeeks">Open</th>
               <th data-sort="partialWeeks">Partial</th>
               <th data-sort="fullWeeks">Full</th>
+              <th data-sort="bookedPct" title="Booked slots as a share of all slots in the period (2 per week)">Booked capacity</th>
               <th>Availability</th>
               <th data-sort="endingTenure">Bookings ending</th>
             </tr>
@@ -1198,13 +1198,13 @@
         '<td><div class="area-name">' + escapeHtml(r.name) + '</div><div class="area-sub">' + escapeHtml(r.region || '') + '</div></td>' +
         '<td class="mono">' + r.weeks + '</td>' +
         '<td class="mono">' + r.bookableSlots + '</td>' +
-        '<td class="mono">' + capacityCell(r.bookedSlots, r.totalSlots) + '</td>' +
         '<td class="mono" style="font-weight:700; color:var(--open);">' + r.bookablePerFirm + '</td>' +
         '<td class="mono">' + nextAvailableCell + '</td>' +
         '<td class="mono">' + requestCell + '</td>' +
         '<td class="mono">' + r.openWeeks + '</td>' +
         '<td class="mono">' + r.partialWeeks + '</td>' +
         '<td class="mono">' + r.fullWeeks + '</td>' +
+        '<td class="mono">' + capacityCell(r.bookedSlots, r.totalSlots) + '</td>' +
         '<td><div class="strip">' + strip + '</div></td>' +
         '<td>' + endingCell + '</td>' +
         '</tr>';
@@ -1267,13 +1267,13 @@
       '<td>Total (' + rows.length + ' area' + (rows.length===1?'':'s') + ')</td>' +
       '<td class="mono">' + periodWeeks + '</td>' +
       '<td class="mono">' + sum('bookableSlots') + '</td>' +
-      '<td class="mono">' + capacityCell(sum('bookedSlots'), sum('totalSlots')) + '</td>' +
       '<td class="mono">' + sum('bookablePerFirm') + '</td>' +
       '<td></td>' +
       '<td></td>' +
       '<td class="mono">' + sum('openWeeks') + '</td>' +
       '<td class="mono">' + sum('partialWeeks') + '</td>' +
       '<td class="mono">' + sum('fullWeeks') + '</td>' +
+      '<td class="mono">' + capacityCell(sum('bookedSlots'), sum('totalSlots')) + '</td>' +
       '<td></td>' +
       '<td class="mono">' + endingCount + ' ending</td>' +
       '</tr>';
@@ -1359,13 +1359,14 @@
 
   document.getElementById('btnAreaCsv').addEventListener('click', () => {
     const names = document.getElementById('includeNames').checked;
-    const head = ['Area','Region','Weeks in period','Available slots','Booked slots','Total slots','Booked capacity %','Bookable','Bookable for','Next available','Weeks requested','Open','Partial','Full','Firms ending'];
+    const head = ['Area','Region','Weeks in period','Available slots','Bookable','Bookable for','Next available','Weeks requested','Open','Partial','Full','Booked slots','Total slots','Booked capacity %','Firms ending'];
     if (names) head.push('Ending firm names');
     const rows = [head];
     exportState.areaRows.forEach(r => {
-      const row = [r.name, r.region || '', r.weeks, r.bookableSlots, r.bookedSlots, r.totalSlots, capacityPct(r.bookedSlots, r.totalSlots), r.bookablePerFirm, bookableBasis(names),
+      const row = [r.name, r.region || '', r.weeks, r.bookableSlots, r.bookablePerFirm, bookableBasis(names),
         r.nextAvailable !== null ? fmtDateInput(new Date(r.nextAvailable)) : '',
-        r.requestedWeeks || '', r.openWeeks, r.partialWeeks, r.fullWeeks, r.endingFirms.length];
+        r.requestedWeeks || '', r.openWeeks, r.partialWeeks, r.fullWeeks,
+        r.bookedSlots, r.totalSlots, capacityPct(r.bookedSlots, r.totalSlots), r.endingFirms.length];
       if (names) row.push(r.endingFirms.map(f => f.firmName + ' (' + f.priorCount + ' wks, ends ' + fmtDateInput(new Date(f.lastWeek)) + ')').join('; '));
       rows.push(row);
     });
