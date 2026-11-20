@@ -247,11 +247,6 @@
   table.data th:hover{ color:var(--ink-soft); }
   table.data th.sorted::after{ content:" ▾"; font-size:9px; }
   table.data td{ padding:10px 10px; border-bottom:1px solid var(--line-soft); vertical-align:middle; font-size:13px; }
-  .row-weeks-input{
-    width:42px; border:1px solid var(--line); border-radius:5px; padding:3px 5px; font-size:12px;
-    color:var(--ink); background:var(--bg); font-family: ui-monospace, "SF Mono", "Roboto Mono", Menlo, Consolas, monospace;
-  }
-  .row-weeks-input:focus{ outline:2px solid #B7D6D9; border-color:var(--open); }
   table.data tr.area-row{ cursor:pointer; box-shadow:inset 3px 0 0 transparent; transition:box-shadow .12s ease, background .12s ease; }
   table.data tr.area-row:hover{ background:#FAFAFB; box-shadow:inset 3px 0 0 var(--open); }
   .area-name{ font-weight:600; }
@@ -266,6 +261,12 @@
   .pill.over{ background:var(--over-bg); color:var(--over); }
   .pill.ok{ background:var(--open-bg); color:var(--open); }
   .pill.near{ background:var(--partial-bg); color:var(--partial); }
+  .cap-pill{ display:inline-block; min-width:46px; text-align:center; padding:2px 8px; border-radius:20px; font-size:11.5px; font-weight:700; }
+  .cap-pill.cap-low{ background:#E3F3E7; color:#2E7D43; }
+  .cap-pill.cap-mid{ background:#FBF0DF; color:#96650C; }
+  .cap-pill.cap-high{ background:#FBE3D3; color:#B4500F; }
+  .cap-pill.cap-full{ background:#F8DEDB; color:#A93226; }
+  .cap-sub{ display:block; color:var(--ink-faint); font-size:11px; margin-top:2px; }
 
   .strip{ display:flex; gap:2px; flex-wrap:wrap; max-width:420px; }
   .sq{ width:9px; height:9px; border-radius:2px; flex:none; }
@@ -399,12 +400,13 @@
               <th style="width:26px;"></th>
               <th data-sort="name">Area</th>
               <th data-sort="weeks">Weeks in period</th>
+              <th data-sort="bookableSlots" title="Every free slot in the area across the period: an open week has 2, a partial week has 1">Available slots</th>
               <th data-sort="bookablePerFirm">Bookable</th>
               <th data-sort="nextAvailable">Next available</th>
-              <th>Weeks requested</th>
               <th data-sort="openWeeks">Open</th>
               <th data-sort="partialWeeks">Partial</th>
               <th data-sort="fullWeeks">Full</th>
+              <th data-sort="bookedPct" title="Booked slots as a share of all slots in the period (2 per week)">Booked capacity</th>
               <th>Availability</th>
               <th data-sort="endingTenure">Bookings ending</th>
             </tr>
@@ -456,7 +458,6 @@
   let expandedOffice = null;
   let selectedAreas = new Set(); // empty = all areas
   let selectedFirm = null; // null = no firm selected: models a firm with no booking history
-  let rowWeeksRequested = new Map(); // location -> requested weeks (per-row, user-entered)
   let regionGroups = new Map(); // region -> sorted array of locations
   let locationRegionMap = new Map(); // location -> region, canonical list of every known area
   let allFirmNames = [];
@@ -1038,8 +1039,7 @@
       const bookablePerFirm = sim.bookableCount;
       const bookableList = sim.bookableList;
       const nextAvailable = bookableList.length ? bookableList[0] : null;
-      const requestedWeeks = rowWeeksRequested.get(area.location) || null;
-      const endingFirms = findEndingFirms(area.location, requestedWeeks || DEFAULT_TENURE_THRESHOLD);
+      const endingFirms = findEndingFirms(area.location, DEFAULT_TENURE_THRESHOLD);
       return {
         location: area.location,
         name: area.location,
@@ -1047,8 +1047,11 @@
         weeks: periodWeekCount, openWeeks, partialWeeks, fullWeeks,
         bookableWeeks: openWeeks + partialWeeks,
         bookableSlots: (openWeeks * 2) + partialWeeks,
+        totalSlots: periodWeekCount * 2,
+        bookedSlots: partialWeeks + (fullWeeks * 2),
+        bookedPct: periodWeekCount ? ((partialWeeks + fullWeeks * 2) / (periodWeekCount * 2)) * 100 : 0,
         bookablePerFirm,
-        bookableList, nextAvailable, requestedWeeks,
+        bookableList, nextAvailable,
         endingFirms, endingTenure: endingFirms.length ? endingFirms[0].priorCount : -1,
         weekDetail
       };
@@ -1177,53 +1180,55 @@
       const strip = r.weekDetail.map(w => '<div class="sq ' + w.state + '" title="w/c ' + fmtDateDisplay(w.date) + ': ' + (w.firms.length ? escapeHtml(w.firms.join(', ')) : 'open') + '"></div>').join('');
       const expanded = expandedOffice === r.location;
       const nextAvailableCell = r.nextAvailable !== null ? fmtDateDisplay(new Date(r.nextAvailable)) : '<span style="color:var(--ink-faint);">none in period</span>';
-      const requestCell = '<input type="number" class="row-weeks-input" data-loc="' + escapeHtml(r.location) + '" min="1" max="52" value="' + (r.requestedWeeks || '') + '" placeholder="e.g. 6" title="Weeks requested by the firm">';
-      const thresholdUsed = r.requestedWeeks || 13;
       const endingCell = r.endingFirms.length
         ? '<span class="pill over" title="' + escapeHtml(r.endingFirms.map(f => f.firmName + ' (' + f.priorCount + ' wks in prior 52, coverage ends ' + fmtDateDisplay(new Date(f.lastWeek)) + ')').join('; ')) + '">' + escapeHtml(r.endingFirms[0].firmName) + (r.endingFirms.length > 1 ? ' +' + (r.endingFirms.length - 1) : '') + '</span>'
-        : '<span style="color:var(--ink-faint); font-size:11.5px;">none ending (\u2265' + thresholdUsed + ' wks)</span>';
+        : '<span style="color:var(--ink-faint); font-size:11.5px;">none ending (\u226513 wks)</span>';
       let html = '<tr class="area-row ' + (expanded?'expanded':'') + '" data-office="' + escapeHtml(r.location) + '">' +
         '<td><span class="chev">\u25B8</span></td>' +
         '<td><div class="area-name">' + escapeHtml(r.name) + '</div><div class="area-sub">' + escapeHtml(r.region || '') + '</div></td>' +
         '<td class="mono">' + r.weeks + '</td>' +
+        '<td class="mono">' + r.bookableSlots + '</td>' +
         '<td class="mono" style="font-weight:700; color:var(--open);">' + r.bookablePerFirm + '</td>' +
         '<td class="mono">' + nextAvailableCell + '</td>' +
-        '<td class="mono">' + requestCell + '</td>' +
         '<td class="mono">' + r.openWeeks + '</td>' +
         '<td class="mono">' + r.partialWeeks + '</td>' +
         '<td class="mono">' + r.fullWeeks + '</td>' +
+        '<td class="mono">' + capacityCell(r.bookedSlots, r.totalSlots) + '</td>' +
         '<td><div class="strip">' + strip + '</div></td>' +
         '<td>' + endingCell + '</td>' +
         '</tr>';
       if (expanded){
-        html += '<tr class="detail-row"><td colspan="11">' + renderWeekDetail(r) + '</td></tr>';
+        html += '<tr class="detail-row"><td colspan="12">' + renderWeekDetail(r) + '</td></tr>';
       }
       return html;
     }).join('') + renderAreaTotalsRow(rows);
 
     tbody.querySelectorAll('tr.area-row').forEach(tr => {
       tr.addEventListener('click', e => {
-        if (e.target.closest('.row-weeks-input')) return;
         const id = tr.getAttribute('data-office');
         expandedOffice = (expandedOffice === id) ? null : id;
         renderAll();
       });
     });
-    tbody.querySelectorAll('.row-weeks-input').forEach(input => {
-      input.addEventListener('click', e => e.stopPropagation());
-      input.addEventListener('change', () => {
-        const loc = input.getAttribute('data-loc');
-        const cap = parseInt(input.getAttribute('max'), 10) || 52;
-        let n = parseInt(input.value, 10);
-        if (Number.isFinite(n) && n > 0){
-          if (n > cap) n = cap;
-          rowWeeksRequested.set(loc, n);
-        } else {
-          rowWeeksRequested.delete(loc);
-        }
-        renderAll();
-      });
-    });
+  }
+
+  // Whole-number booked share. 100% only when every slot is taken, so a nearly full area
+  // never rounds up into the red band. Bands: up to 50 green, 51-80 amber, 81-99 orange, 100 red.
+  function capacityPct(booked, total){
+    if (!total) return 0;
+    if (booked >= total) return 100;
+    return Math.min(99, Math.round((booked / total) * 100));
+  }
+  function capacityBand(pct){
+    if (pct >= 100) return 'cap-full';
+    if (pct > 80) return 'cap-high';
+    if (pct > 50) return 'cap-mid';
+    return 'cap-low';
+  }
+  function capacityCell(booked, total){
+    const pct = capacityPct(booked, total);
+    return '<span class="cap-pill ' + capacityBand(pct) + '">' + pct + '%</span>' +
+      '<span class="cap-sub">' + booked.toLocaleString() + ' of ' + total.toLocaleString() + '</span>';
   }
 
   function renderAreaTotalsRow(rows){
@@ -1234,12 +1239,13 @@
       '<td></td>' +
       '<td>Total (' + rows.length + ' area' + (rows.length===1?'':'s') + ')</td>' +
       '<td class="mono">' + periodWeeks + '</td>' +
+      '<td class="mono">' + sum('bookableSlots') + '</td>' +
       '<td class="mono">' + sum('bookablePerFirm') + '</td>' +
-      '<td></td>' +
       '<td></td>' +
       '<td class="mono">' + sum('openWeeks') + '</td>' +
       '<td class="mono">' + sum('partialWeeks') + '</td>' +
       '<td class="mono">' + sum('fullWeeks') + '</td>' +
+      '<td class="mono">' + capacityCell(sum('bookedSlots'), sum('totalSlots')) + '</td>' +
       '<td></td>' +
       '<td class="mono">' + endingCount + ' ending</td>' +
       '</tr>';
@@ -1325,13 +1331,14 @@
 
   document.getElementById('btnAreaCsv').addEventListener('click', () => {
     const names = document.getElementById('includeNames').checked;
-    const head = ['Area','Region','Weeks in period','Bookable','Bookable for','Next available','Weeks requested','Open','Partial','Full','Firms ending'];
+    const head = ['Area','Region','Weeks in period','Available slots','Bookable','Bookable for','Next available','Open','Partial','Full','Booked slots','Total slots','Booked capacity %','Firms ending'];
     if (names) head.push('Ending firm names');
     const rows = [head];
     exportState.areaRows.forEach(r => {
-      const row = [r.name, r.region || '', r.weeks, r.bookablePerFirm, bookableBasis(names),
+      const row = [r.name, r.region || '', r.weeks, r.bookableSlots, r.bookablePerFirm, bookableBasis(names),
         r.nextAvailable !== null ? fmtDateInput(new Date(r.nextAvailable)) : '',
-        r.requestedWeeks || '', r.openWeeks, r.partialWeeks, r.fullWeeks, r.endingFirms.length];
+        r.openWeeks, r.partialWeeks, r.fullWeeks,
+        r.bookedSlots, r.totalSlots, capacityPct(r.bookedSlots, r.totalSlots), r.endingFirms.length];
       if (names) row.push(r.endingFirms.map(f => f.firmName + ' (' + f.priorCount + ' wks, ends ' + fmtDateInput(new Date(f.lastWeek)) + ')').join('; '));
       rows.push(row);
     });
